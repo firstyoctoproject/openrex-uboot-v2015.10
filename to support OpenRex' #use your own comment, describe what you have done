@@ -1,0 +1,1958 @@
+[1mdiff --git a/README.md b/README.md[m
+[1mnew file mode 100644[m
+[1mindex 0000000..cb29457d[m
+[1m--- /dev/null[m
+[1m+++ b/README.md[m
+[36m@@ -0,0 +1,25 @@[m
+[32m+[m[32m# openrex_uboot_v2015_10[m
+[32m+[m[32mmx6q/dl/s/spl openrex u-boot v2015.10[m[41m [m
+[32m+[m[41m [m
+[32m+[m[32m# Download repository[m
+[32m+[m[32m    git clone https://github.com/FEDEVEL/openrex-uboot-v2015.10.git[m
+[32m+[m[32m    cd openrex-uboot-v2015.10[m
+[32m+[m[41m [m
+[32m+[m[32m# Install cross compiler[m
+[32m+[m[32m    apt-get install gcc-arm-linux-gnueabihf[m
+[32m+[m[41m [m
+[32m+[m[32m# Setup cross compiler[m
+[32m+[m[32m    export CROSS_COMPILE=arm-linux-gnueabihf-[m
+[32m+[m[32m    export ARCH=arm[m
+[32m+[m[41m [m
+[32m+[m[32m# Build (imx6q)[m
+[32m+[m[32m    make distclean[m
+[32m+[m[32m    make mx6qopenrex_config[m
+[32m+[m[32m    make[m
+[32m+[m[32m    cp u-boot.imx /tftp/uboot-mx6qopenrex.imx[m
+[32m+[m[41m [m
+[32m+[m[32m# Build (imx6dl)[m
+[32m+[m[32m    TODO[m
+[32m+[m[41m [m
+[32m+[m[32m# Build (imx6s)[m
+[32m+[m[32m    TODO[m
+[1mdiff --git a/arch/arm/cpu/armv7/mx6/Kconfig b/arch/arm/cpu/armv7/mx6/Kconfig[m
+[1mindex 8489182..0f25392 100644[m
+[1m--- a/arch/arm/cpu/armv7/mx6/Kconfig[m
+[1m+++ b/arch/arm/cpu/armv7/mx6/Kconfig[m
+[36m@@ -86,6 +86,12 @@[m [mconfig TARGET_MX6SABRESD[m
+ 	select DM[m
+ 	select DM_THERMAL[m
+ [m
+[32m+[m[32mconfig TARGET_MX6OPENREX[m
+[32m+[m[41m    [m	[32mbool "mx6openrex"[m
+[32m+[m[41m    [m	[32mselect SUPPORT_SPL[m
+[32m+[m[41m    [m	[32mselect DM[m
+[32m+[m[41m    [m	[32mselect DM_THERMAL[m
+[32m+[m
+ config TARGET_MX6SLEVK[m
+ 	bool "mx6slevk"[m
+ 	select SUPPORT_SPL[m
+[36m@@ -164,6 +170,7 @@[m [msource "board/embest/mx6boards/Kconfig"[m
+ source "board/freescale/mx6qarm2/Kconfig"[m
+ source "board/freescale/mx6qsabreauto/Kconfig"[m
+ source "board/freescale/mx6sabresd/Kconfig"[m
+[32m+[m[32msource "board/fedevel/mx6openrex/Kconfig"[m
+ source "board/freescale/mx6slevk/Kconfig"[m
+ source "board/freescale/mx6sxsabresd/Kconfig"[m
+ source "board/freescale/mx6ul_14x14_evk/Kconfig"[m
+[1mdiff --git a/board/fedevel/common/Makefile b/board/fedevel/common/Makefile[m
+[1mnew file mode 100644[m
+[1mindex 0000000..87d0578[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/common/Makefile[m
+[36m@@ -0,0 +1,80 @@[m
+[32m+[m[32m#[m
+[32m+[m[32m# (C) Copyright 2006[m
+[32m+[m[32m# Wolfgang Denk, DENX Software Engineering, wd@denx.de.[m
+[32m+[m[32m#[m
+[32m+[m[32m# SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m#[m
+[32m+[m
+[32m+[m[32mMINIMAL=[m
+[32m+[m
+[32m+[m[32mifdef CONFIG_SPL_BUILD[m
+[32m+[m[32mifdef CONFIG_SPL_INIT_MINIMAL[m
+[32m+[m[32mMINIMAL=y[m
+[32m+[m[32mendif[m
+[32m+[m[32mendif[m
+[32m+[m
+[32m+[m[32mifdef MINIMAL[m
+[32m+[m[32m# necessary to create built-in.o[m
+[32m+[m[32mobj- := __dummy__.o[m
+[32m+[m[32melse[m
+[32m+[m[32mobj-$(CONFIG_FSL_CADMUS)	+= cadmus.o[m
+[32m+[m[32mobj-$(CONFIG_FSL_VIA)		+= cds_via.o[m
+[32m+[m[32mobj-$(CONFIG_FMAN_ENET)	+= fman.o[m
+[32m+[m[32mobj-$(CONFIG_FSL_PIXIS)	+= pixis.o[m
+[32m+[m[32mifndef CONFIG_SPL_BUILD[m
+[32m+[m[32mobj-$(CONFIG_FSL_NGPIXIS)	+= ngpixis.o[m
+[32m+[m[32mobj-$(CONFIG_VID)		+= vid.o[m
+[32m+[m[32mendif[m
+[32m+[m[32mobj-$(CONFIG_FSL_QIXIS)	+= qixis.o[m
+[32m+[m[32mobj-$(CONFIG_PQ_MDS_PIB)	+= pq-mds-pib.o[m
+[32m+[m[32mifndef CONFIG_SPL_BUILD[m
+[32m+[m[32mobj-$(CONFIG_ID_EEPROM)	+= sys_eeprom.o[m
+[32m+[m[32mendif[m
+[32m+[m[32mobj-$(CONFIG_FSL_SGMII_RISER)	+= sgmii_riser.o[m
+[32m+[m[32mifndef CONFIG_RAMBOOT_PBL[m
+[32m+[m[32mobj-$(CONFIG_FSL_FIXED_MMC_LOCATION)	+= sdhc_boot.o[m
+[32m+[m[32mendif[m
+[32m+[m
+[32m+[m[32mobj-$(CONFIG_FSL_DIU_CH7301)	+= diu_ch7301.o[m
+[32m+[m
+[32m+[m[32mifdef CONFIG_ARM[m
+[32m+[m[32mobj-$(CONFIG_DEEP_SLEEP)		+= arm_sleep.o[m
+[32m+[m[32melse[m
+[32m+[m[32mobj-$(CONFIG_DEEP_SLEEP)		+= mpc85xx_sleep.o[m
+[32m+[m[32mendif[m
+[32m+[m
+[32m+[m[32mobj-$(CONFIG_FSL_DCU_SII9022A)    += dcu_sii9022a.o[m
+[32m+[m
+[32m+[m[32mobj-$(CONFIG_MPC8541CDS)	+= cds_pci_ft.o[m
+[32m+[m[32mobj-$(CONFIG_MPC8548CDS)	+= cds_pci_ft.o[m
+[32m+[m[32mobj-$(CONFIG_MPC8555CDS)	+= cds_pci_ft.o[m
+[32m+[m
+[32m+[m[32mobj-$(CONFIG_MPC8536DS)	+= ics307_clk.o[m
+[32m+[m[32mobj-$(CONFIG_MPC8572DS)	+= ics307_clk.o[m
+[32m+[m[32mobj-$(CONFIG_P1022DS)		+= ics307_clk.o[m
+[32m+[m[32mobj-$(CONFIG_P2020DS)		+= ics307_clk.o[m
+[32m+[m[32mobj-$(CONFIG_P3041DS)		+= ics307_clk.o[m
+[32m+[m[32mobj-$(CONFIG_P4080DS)		+= ics307_clk.o[m
+[32m+[m[32mobj-$(CONFIG_P5020DS)		+= ics307_clk.o[m
+[32m+[m[32mobj-$(CONFIG_P5040DS)		+= ics307_clk.o[m
+[32m+[m[32mobj-$(CONFIG_VSC_CROSSBAR)    += vsc3316_3308.o[m
+[32m+[m[32mobj-$(CONFIG_IDT8T49N222A)	+= idt8t49n222a_serdes_clk.o[m
+[32m+[m[32mobj-$(CONFIG_ZM7300)		+= zm7300.o[m
+[32m+[m[32mobj-$(CONFIG_POWER_PFUZE100)	+= pfuze.o[m
+[32m+[m
+[32m+[m[32mobj-$(CONFIG_LS102XA_STREAM_ID)	+= ls102xa_stream_id.o[m
+[32m+[m
+[32m+[m[32m# deal with common files for P-series corenet based devices[m
+[32m+[m[32mobj-$(CONFIG_P2041RDB)	+= p_corenet/[m
+[32m+[m[32mobj-$(CONFIG_P3041DS)	+= p_corenet/[m
+[32m+[m[32mobj-$(CONFIG_P4080DS)	+= p_corenet/[m
+[32m+[m[32mobj-$(CONFIG_P5020DS)	+= p_corenet/[m
+[32m+[m[32mobj-$(CONFIG_P5040DS)	+= p_corenet/[m
+[32m+[m
+[32m+[m[32mobj-$(CONFIG_LS102XA_NS_ACCESS)	+= ns_access.o[m
+[32m+[m
+[32m+[m[32mifdef CONFIG_SECURE_BOOT[m
+[32m+[m[32mobj-$(CONFIG_CMD_ESBC_VALIDATE) += fsl_validate.o cmd_esbc_validate.o[m
+[32m+[m[32mendif[m
+[32m+[m
+[32m+[m[32mendif[m
+[1mdiff --git a/board/fedevel/common/pfuze.c b/board/fedevel/common/pfuze.c[m
+[1mnew file mode 100644[m
+[1mindex 0000000..783c46d[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/common/pfuze.c[m
+[36m@@ -0,0 +1,94 @@[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Copyright 2014 Freescale Semiconductor, Inc.[m
+[32m+[m[32m *[m
+[32m+[m[32m * SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32m#include <common.h>[m
+[32m+[m[32m#include <errno.h>[m
+[32m+[m[32m#include <power/pmic.h>[m
+[32m+[m[32m#include <power/pfuze100_pmic.h>[m
+[32m+[m
+[32m+[m[32m#ifndef CONFIG_DM_PMIC_PFUZE100[m
+[32m+[m[32mint pfuze_mode_init(struct pmic *p, u32 mode)[m
+[32m+[m[32m{[m
+[32m+[m	[32munsigned char offset, i, switch_num;[m
+[32m+[m	[32mu32 id, ret;[m
+[32m+[m
+[32m+[m	[32mpmic_reg_read(p, PFUZE100_DEVICEID, &id);[m
+[32m+[m	[32mid = id & 0xf;[m
+[32m+[m
+[32m+[m	[32mif (id == 0) {[m
+[32m+[m		[32mswitch_num = 6;[m
+[32m+[m		[32moffset = PFUZE100_SW1CMODE;[m
+[32m+[m	[32m} else if (id == 1) {[m
+[32m+[m		[32mswitch_num = 4;[m
+[32m+[m		[32moffset = PFUZE100_SW2MODE;[m
+[32m+[m	[32m} else {[m
+[32m+[m		[32mprintf("Not supported, id=%d\n", id);[m
+[32m+[m		[32mreturn -EINVAL;[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mret = pmic_reg_write(p, PFUZE100_SW1ABMODE, mode);[m
+[32m+[m	[32mif (ret < 0) {[m
+[32m+[m		[32mprintf("Set SW1AB mode error!\n");[m
+[32m+[m		[32mreturn ret;[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mfor (i = 0; i < switch_num - 1; i++) {[m
+[32m+[m		[32mret = pmic_reg_write(p, offset + i * SWITCH_SIZE, mode);[m
+[32m+[m		[32mif (ret < 0) {[m
+[32m+[m			[32mprintf("Set switch 0x%x mode error!\n",[m
+[32m+[m			[32m       offset + i * SWITCH_SIZE);[m
+[32m+[m			[32mreturn ret;[m
+[32m+[m		[32m}[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn ret;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstruct pmic *pfuze_common_init(unsigned char i2cbus)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct pmic *p;[m
+[32m+[m	[32mint ret;[m
+[32m+[m	[32munsigned int reg;[m
+[32m+[m
+[32m+[m	[32mret = power_pfuze100_init(i2cbus);[m
+[32m+[m	[32mif (ret)[m
+[32m+[m		[32mreturn NULL;[m
+[32m+[m
+[32m+[m	[32mp = pmic_get("PFUZE100");[m
+[32m+[m	[32mret = pmic_probe(p);[m
+[32m+[m	[32mif (ret)[m
+[32m+[m		[32mreturn NULL;[m
+[32m+[m
+[32m+[m	[32mpmic_reg_read(p, PFUZE100_DEVICEID, &reg);[m
+[32m+[m	[32mprintf("PMIC:  PFUZE100 ID=0x%02x\n", reg);[m
+[32m+[m
+[32m+[m	[32m/* Set SW1AB stanby volage to 0.975V */[m
+[32m+[m	[32mpmic_reg_read(p, PFUZE100_SW1ABSTBY, &reg);[m
+[32m+[m	[32mreg &= ~SW1x_STBY_MASK;[m
+[32m+[m	[32mreg |= SW1x_0_975V;[m
+[32m+[m	[32mpmic_reg_write(p, PFUZE100_SW1ABSTBY, reg);[m
+[32m+[m
+[32m+[m	[32m/* Set SW1AB/VDDARM step ramp up time from 16us to 4us/25mV */[m
+[32m+[m	[32mpmic_reg_read(p, PFUZE100_SW1ABCONF, &reg);[m
+[32m+[m	[32mreg &= ~SW1xCONF_DVSSPEED_MASK;[m
+[32m+[m	[32mreg |= SW1xCONF_DVSSPEED_4US;[m
+[32m+[m	[32mpmic_reg_write(p, PFUZE100_SW1ABCONF, reg);[m
+[32m+[m
+[32m+[m	[32m/* Set SW1C standby voltage to 0.975V */[m
+[32m+[m	[32mpmic_reg_read(p, PFUZE100_SW1CSTBY, &reg);[m
+[32m+[m	[32mreg &= ~SW1x_STBY_MASK;[m
+[32m+[m	[32mreg |= SW1x_0_975V;[m
+[32m+[m	[32mpmic_reg_write(p, PFUZE100_SW1CSTBY, reg);[m
+[32m+[m
+[32m+[m	[32m/* Set SW1C/VDDSOC step ramp up time from 16us to 4us/25mV */[m
+[32m+[m	[32mpmic_reg_read(p, PFUZE100_SW1CCONF, &reg);[m
+[32m+[m	[32mreg &= ~SW1xCONF_DVSSPEED_MASK;[m
+[32m+[m	[32mreg |= SW1xCONF_DVSSPEED_4US;[m
+[32m+[m	[32mpmic_reg_write(p, PFUZE100_SW1CCONF, reg);[m
+[32m+[m
+[32m+[m	[32mreturn p;[m
+[32m+[m[32m}[m
+[32m+[m[32m#endif[m
+[1mdiff --git a/board/fedevel/common/pfuze.h b/board/fedevel/common/pfuze.h[m
+[1mnew file mode 100644[m
+[1mindex 0000000..53cfc99[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/common/pfuze.h[m
+[36m@@ -0,0 +1,13 @@[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Copyright 2014 Freescale Semiconductor, Inc.[m
+[32m+[m[32m *[m
+[32m+[m[32m * SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32m#ifndef __PFUZE_BOARD_HELPER__[m
+[32m+[m[32m#define __PFUZE_BOARD_HELPER__[m
+[32m+[m
+[32m+[m[32mstruct pmic *pfuze_common_init(unsigned char i2cbus);[m
+[32m+[m[32mint pfuze_mode_init(struct pmic *p, u32 mode);[m
+[32m+[m
+[32m+[m[32m#endif[m
+[1mdiff --git a/board/fedevel/mx6openrex/Kconfig b/board/fedevel/mx6openrex/Kconfig[m
+[1mnew file mode 100644[m
+[1mindex 0000000..4a6c50e[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/mx6openrex/Kconfig[m
+[36m@@ -0,0 +1,12 @@[m
+[32m+[m[32mif TARGET_MX6OPENREX[m
+[32m+[m[41m [m
+[32m+[m[32mconfig SYS_BOARD[m
+[32m+[m[32m    default "mx6openrex"[m
+[32m+[m[41m [m
+[32m+[m[32mconfig SYS_VENDOR[m
+[32m+[m[32m    default "fedevel"[m
+[32m+[m[41m [m
+[32m+[m[32mconfig SYS_CONFIG_NAME[m
+[32m+[m[32m    default "mx6openrex"[m
+[32m+[m[41m [m
+[32m+[m[32mendif[m
+[1mdiff --git a/board/fedevel/mx6openrex/MAINTAINERS b/board/fedevel/mx6openrex/MAINTAINERS[m
+[1mnew file mode 100644[m
+[1mindex 0000000..c5f9f0c[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/mx6openrex/MAINTAINERS[m
+[36m@@ -0,0 +1,8 @@[m
+[32m+[m[32mMX6OPENREX BOARD[m
+[32m+[m[32mM:  Robert Feranec <info@fedevel.com>[m
+[32m+[m[32mS:  Maintained[m
+[32m+[m[32mF:  board/fedevel/mx6openrex/[m
+[32m+[m[32mF:  include/configs/mx6openrex.h[m
+[32m+[m[32mF:  configs/mx6dlopenrex_defconfig[m
+[32m+[m[32mF:  configs/mx6qopenrex_defconfig[m
+[32m+[m[32mF:  configs/mx6openrex_spl_defconfig[m
+[1mdiff --git a/board/fedevel/mx6openrex/Makefile b/board/fedevel/mx6openrex/Makefile[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8975c5b[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/mx6openrex/Makefile[m
+[36m@@ -0,0 +1,9 @@[m
+[32m+[m[32m#[m
+[32m+[m[32m# Copyright (C) 2007, Guennadi Liakhovetski <lg@denx.de>[m
+[32m+[m[32m#[m
+[32m+[m[32m# (C) Copyright 2011 Freescale Semiconductor, Inc.[m
+[32m+[m[32m#[m
+[32m+[m[32m# SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m#[m
+[32m+[m
+[32m+[m[32mobj-y  := mx6openrex.o[m
+[1mdiff --git a/board/fedevel/mx6openrex/mx6dlopenrex.cfg b/board/fedevel/mx6openrex/mx6dlopenrex.cfg[m
+[1mnew file mode 100644[m
+[1mindex 0000000..f35f22e[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/mx6openrex/mx6dlopenrex.cfg[m
+[36m@@ -0,0 +1,131 @@[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Copyright (C) 2014 Freescale Semiconductor, Inc.[m
+[32m+[m[32m *[m
+[32m+[m[32m * SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m *[m
+[32m+[m[32m * Refer docs/README.imxmage for more details about how-to configure[m
+[32m+[m[32m * and create imximage boot image[m
+[32m+[m[32m *[m
+[32m+[m[32m * The syntax is taken as close as possible with the kwbimage[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32m/* image version */[m
+[32m+[m
+[32m+[m[32mIMAGE_VERSION 2[m
+[32m+[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Boot Device : one of[m
+[32m+[m[32m * spi, sd (the board has no nand neither onenand)[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32mBOOT_FROM	sd[m
+[32m+[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Device Configuration Data (DCD)[m
+[32m+[m[32m *[m
+[32m+[m[32m * Each entry must have the format:[m
+[32m+[m[32m * Addr-type           Address        Value[m
+[32m+[m[32m *[m
+[32m+[m[32m * where:[m
+[32m+[m[32m *	Addr-type register length (1,2 or 4 bytes)[m
+[32m+[m[32m *	Address	  absolute address of the register[m
+[32m+[m[32m *	value	  value to be stored in the register[m
+[32m+[m[32m */[m
+[32m+[m[32mDATA 4	0x020e0774 0x000C0000[m
+[32m+[m[32mDATA 4	0x020e0754 0x00000000[m
+[32m+[m[32mDATA 4	0x020e04ac 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04b0 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0464 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0490 0x00000030[m
+[32m+[m[32mDATA 4	0x020e074c 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0494 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04a0 0x00000000[m
+[32m+[m[32mDATA 4	0x020e04b4 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04b8 0x00000030[m
+[32m+[m[32mDATA 4	0x020e076c 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0750 0x00020000[m
+[32m+[m[32mDATA 4	0x020e04bc 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04c0 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04c4 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04c8 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04cc 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04d0 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04d4 0x00000030[m
+[32m+[m[32mDATA 4	0x020e04d8 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0760 0x00020000[m
+[32m+[m[32mDATA 4	0x020e0764 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0770 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0778 0x00000030[m
+[32m+[m[32mDATA 4	0x020e077c 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0780 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0784 0x00000030[m
+[32m+[m[32mDATA 4	0x020e078c 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0748 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0470 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0474 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0478 0x00000030[m
+[32m+[m[32mDATA 4	0x020e047c 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0480 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0484 0x00000030[m
+[32m+[m[32mDATA 4	0x020e0488 0x00000030[m
+[32m+[m[32mDATA 4	0x020e048c 0x00000030[m
+[32m+[m[32mDATA 4	0x021b0800 0xa1390003[m
+[32m+[m[32mDATA 4	0x021b080c 0x001F001F[m
+[32m+[m[32mDATA 4	0x021b0810 0x001F001F[m
+[32m+[m[32mDATA 4	0x021b480c 0x001F001F[m
+[32m+[m[32mDATA 4	0x021b4810 0x001F001F[m
+[32m+[m[32mDATA 4	0x021b083c 0x4220021F[m
+[32m+[m[32mDATA 4	0x021b0840 0x0207017E[m
+[32m+[m[32mDATA 4	0x021b483c 0x4201020C[m
+[32m+[m[32mDATA 4	0x021b4840 0x01660172[m
+[32m+[m[32mDATA 4	0x021b0848 0x4A4D4E4D[m
+[32m+[m[32mDATA 4	0x021b4848 0x4A4F5049[m
+[32m+[m[32mDATA 4	0x021b0850 0x3F3C3D31[m
+[32m+[m[32mDATA 4	0x021b4850 0x3238372B[m
+[32m+[m[32mDATA 4	0x021b081c 0x33333333[m
+[32m+[m[32mDATA 4	0x021b0820 0x33333333[m
+[32m+[m[32mDATA 4	0x021b0824 0x33333333[m
+[32m+[m[32mDATA 4	0x021b0828 0x33333333[m
+[32m+[m[32mDATA 4	0x021b481c 0x33333333[m
+[32m+[m[32mDATA 4	0x021b4820 0x33333333[m
+[32m+[m[32mDATA 4	0x021b4824 0x33333333[m
+[32m+[m[32mDATA 4	0x021b4828 0x33333333[m
+[32m+[m[32mDATA 4	0x021b08b8 0x00000800[m
+[32m+[m[32mDATA 4	0x021b48b8 0x00000800[m
+[32m+[m[32mDATA 4	0x021b0004 0x0002002D[m
+[32m+[m[32mDATA 4	0x021b0008 0x00333030[m
+[32m+[m[32mDATA 4	0x021b000c 0x3F435313[m
+[32m+[m[32mDATA 4	0x021b0010 0xB66E8B63[m
+[32m+[m[32mDATA 4	0x021b0014 0x01FF00DB[m
+[32m+[m[32mDATA 4	0x021b0018 0x00001740[m
+[32m+[m[32mDATA 4	0x021b001c 0x00008000[m
+[32m+[m[32mDATA 4	0x021b002c 0x000026d2[m
+[32m+[m[32mDATA 4	0x021b0030 0x00431023[m
+[32m+[m[32mDATA 4	0x021b0040 0x00000027[m
+[32m+[m[32mDATA 4	0x021b0000 0x831A0000[m
+[32m+[m[32mDATA 4	0x021b001c 0x04008032[m
+[32m+[m[32mDATA 4	0x021b001c 0x00008033[m
+[32m+[m[32mDATA 4	0x021b001c 0x00048031[m
+[32m+[m[32mDATA 4	0x021b001c 0x05208030[m
+[32m+[m[32mDATA 4 0x021b001c 0x04008040[m
+[32m+[m[32mDATA 4	0x021b0020 0x00005800[m
+[32m+[m[32mDATA 4	0x021b0818 0x00011117[m
+[32m+[m[32mDATA 4	0x021b4818 0x00011117[m
+[32m+[m[32mDATA 4	0x021b0004 0x0002556D[m
+[32m+[m[32mDATA 4	0x021b0404 0x00011006[m
+[32m+[m[32mDATA 4	0x021b001c 0x00000000[m
+[32m+[m
+[32m+[m[32m/* set the default clock gate to save power */[m
+[32m+[m[32mDATA 4 0x020c4068 0x00C03F3F[m
+[32m+[m[32mDATA 4 0x020c406c 0x0030FC03[m
+[32m+[m[32mDATA 4 0x020c4070 0x0FFFC000[m
+[32m+[m[32mDATA 4 0x020c4074 0x3FF00000[m
+[32m+[m[32mDATA 4 0x020c4078 0x00FFF300[m
+[32m+[m[32mDATA 4 0x020c407c 0x0F0000C3[m
+[32m+[m[32mDATA 4 0x020c4080 0x000003FF[m
+[32m+[m
+[32m+[m[32m/* enable AXI cache for VDOA/VPU/IPU */[m
+[32m+[m[32mDATA 4 0x020e0010 0xF00000CF[m
+[32m+[m[32m/* set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7 */[m
+[32m+[m[32mDATA 4 0x020e0018 0x007F007F[m
+[32m+[m[32mDATA 4 0x020e001c 0x007F007F[m
+[1mdiff --git a/board/fedevel/mx6openrex/mx6openrex.c b/board/fedevel/mx6openrex/mx6openrex.c[m
+[1mnew file mode 100644[m
+[1mindex 0000000..5b0b83e[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/mx6openrex/mx6openrex.c[m
+[36m@@ -0,0 +1,921 @@[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Copyright (C) 2012 Freescale Semiconductor, Inc.[m
+[32m+[m[32m *[m
+[32m+[m[32m * Author: Fabio Estevam <fabio.estevam@freescale.com>[m
+[32m+[m[32m *[m
+[32m+[m[32m * SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32m#include <asm/arch/clock.h>[m
+[32m+[m[32m#include <asm/arch/imx-regs.h>[m
+[32m+[m[32m#include <asm/arch/iomux.h>[m
+[32m+[m[32m#include <asm/arch/mx6-pins.h>[m
+[32m+[m[32m#include <asm/errno.h>[m
+[32m+[m[32m#include <asm/gpio.h>[m
+[32m+[m[32m#include <asm/imx-common/mxc_i2c.h>[m
+[32m+[m[32m#include <asm/imx-common/iomux-v3.h>[m
+[32m+[m[32m#include <asm/imx-common/boot_mode.h>[m
+[32m+[m[32m#include <asm/imx-common/video.h>[m
+[32m+[m[32m#include <mmc.h>[m
+[32m+[m[32m#include <fsl_esdhc.h>[m
+[32m+[m[32m#include <miiphy.h>[m
+[32m+[m[32m#include <netdev.h>[m
+[32m+[m[32m#include <asm/arch/mxc_hdmi.h>[m
+[32m+[m[32m#include <asm/arch/crm_regs.h>[m
+[32m+[m[32m#include <asm/io.h>[m
+[32m+[m[32m#include <asm/arch/sys_proto.h>[m
+[32m+[m[32m#include <i2c.h>[m
+[32m+[m[32m#include <power/pmic.h>[m
+[32m+[m[32m#include <power/pfuze100_pmic.h>[m
+[32m+[m[32m#include "../common/pfuze.h"[m
+[32m+[m[32m#include <asm/arch/mx6-ddr.h>[m
+[32m+[m[32m#include <usb.h>[m
+[32m+[m
+[32m+[m[32mDECLARE_GLOBAL_DATA_PTR;[m
+[32m+[m
+[32m+[m[32m#define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\[m
+[32m+[m	[32mPAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\[m
+[32m+[m	[32mPAD_CTL_SRE_FAST  | PAD_CTL_HYS)[m
+[32m+[m
+[32m+[m[32m#define USDHC_PAD_CTRL (PAD_CTL_PUS_47K_UP |			\[m
+[32m+[m	[32mPAD_CTL_SPEED_LOW | PAD_CTL_DSE_80ohm |			\[m
+[32m+[m	[32mPAD_CTL_SRE_FAST  | PAD_CTL_HYS)[m
+[32m+[m
+[32m+[m[32m#define ENET_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\[m
+[32m+[m	[32mPAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)[m
+[32m+[m
+[32m+[m[32m#define SPI_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_SPEED_MED | \[m
+[32m+[m		[32m      PAD_CTL_DSE_40ohm | PAD_CTL_SRE_FAST)[m
+[32m+[m
+[32m+[m[32m#define I2C_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\[m
+[32m+[m	[32mPAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS |	\[m
+[32m+[m	[32mPAD_CTL_ODE | PAD_CTL_SRE_FAST)[m
+[32m+[m
+[32m+[m[32m#define I2C_PMIC	1[m
+[32m+[m
+[32m+[m[32m#define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)[m
+[32m+[m
+[32m+[m[32m#define DISP0_PWR_EN	IMX_GPIO_NR(1, 21)[m
+[32m+[m
+[32m+[m[32mint dram_init(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mgd->ram_size = imx_ddr_size();[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const uart1_pads[] = {[m
+[32m+[m	[32mMX6_PAD_CSI0_DAT10__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_CSI0_DAT11__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const enet_pads[] = {[m
+[32m+[m	[32mMX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_TXC__RGMII_TXC	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_TD0__RGMII_TD0	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_TD1__RGMII_TD1	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_TD2__RGMII_TD2	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_TD3__RGMII_TD3	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_TX_CTL__RGMII_TX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_ENET_REF_CLK__ENET_TX_CLK	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_RXC__RGMII_RXC	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_RD0__RGMII_RD0	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_RD1__RGMII_RD1	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_RD2__RGMII_RD2	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_RD3__RGMII_RD3	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_RGMII_RX_CTL__RGMII_RX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),[m
+[32m+[m	[32m/* AR8031 PHY Reset */[m
+[32m+[m	[32mMX6_PAD_ENET_CRS_DV__GPIO1_IO25		| MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic void setup_iomux_enet(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mimx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));[m
+[32m+[m
+[32m+[m	[32m/* Reset AR8031 PHY */[m
+[32m+[m	[32mgpio_direction_output(IMX_GPIO_NR(1, 25) , 0);[m
+[32m+[m	[32mudelay(500);[m
+[32m+[m	[32mgpio_set_value(IMX_GPIO_NR(1, 25), 1);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const usdhc2_pads[] = {[m
+[32m+[m	[32mMX6_PAD_SD2_CLK__SD2_CLK	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD2_CMD__SD2_CMD	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD2_DAT0__SD2_DATA0	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD2_DAT1__SD2_DATA1	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD2_DAT2__SD2_DATA2	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD2_DAT3__SD2_DATA3	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_NANDF_D4__SD2_DATA4	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_NANDF_D5__SD2_DATA5	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_NANDF_D6__SD2_DATA6	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_NANDF_D7__SD2_DATA7	| MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_NANDF_D2__GPIO2_IO02	| MUX_PAD_CTRL(NO_PAD_CTRL), /* CD */[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const usdhc3_pads[] = {[m
+[32m+[m	[32mMX6_PAD_SD3_CLK__SD3_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_CMD__SD3_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_DAT0__SD3_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_DAT1__SD3_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_DAT2__SD3_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_DAT3__SD3_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_DAT4__SD3_DATA4 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_DAT5__SD3_DATA5 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_DAT6__SD3_DATA6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD3_DAT7__SD3_DATA7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_NANDF_D0__GPIO2_IO00    | MUX_PAD_CTRL(NO_PAD_CTRL), /* CD */[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const usdhc4_pads[] = {[m
+[32m+[m	[32mMX6_PAD_SD4_CLK__SD4_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_CMD__SD4_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_DAT0__SD4_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_DAT1__SD4_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_DAT2__SD4_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_DAT3__SD4_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_DAT4__SD4_DATA4 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_DAT5__SD4_DATA5 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_DAT6__SD4_DATA6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD4_DAT7__SD4_DATA7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const ecspi1_pads[] = {[m
+[32m+[m	[32mMX6_PAD_KEY_COL0__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_KEY_COL1__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_KEY_ROW0__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_KEY_ROW1__GPIO4_IO09 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const rgb_pads[] = {[m
+[32m+[m	[32mMX6_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DI0_PIN15__IPU1_DI0_PIN15 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DI0_PIN2__IPU1_DI0_PIN02 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DI0_PIN3__IPU1_DI0_PIN03 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DI0_PIN4__IPU1_DI0_PIN04 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT0__IPU1_DISP0_DATA00 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT1__IPU1_DISP0_DATA01 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT2__IPU1_DISP0_DATA02 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT3__IPU1_DISP0_DATA03 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT4__IPU1_DISP0_DATA04 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT5__IPU1_DISP0_DATA05 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT6__IPU1_DISP0_DATA06 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT7__IPU1_DISP0_DATA07 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT8__IPU1_DISP0_DATA08 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT9__IPU1_DISP0_DATA09 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT10__IPU1_DISP0_DATA10 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT11__IPU1_DISP0_DATA11 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT12__IPU1_DISP0_DATA12 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT13__IPU1_DISP0_DATA13 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT14__IPU1_DISP0_DATA14 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT15__IPU1_DISP0_DATA15 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT16__IPU1_DISP0_DATA16 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT17__IPU1_DISP0_DATA17 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT18__IPU1_DISP0_DATA18 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT19__IPU1_DISP0_DATA19 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT20__IPU1_DISP0_DATA20 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT21__IPU1_DISP0_DATA21 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT22__IPU1_DISP0_DATA22 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_DISP0_DAT23__IPU1_DISP0_DATA23 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_SD1_DAT3__GPIO1_IO21 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic void enable_rgb(struct display_info_t const *dev)[m
+[32m+[m[32m{[m
+[32m+[m	[32mimx_iomux_v3_setup_multiple_pads(rgb_pads, ARRAY_SIZE(rgb_pads));[m
+[32m+[m	[32mgpio_direction_output(DISP0_PWR_EN, 1);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstatic struct i2c_pads_info i2c_pad_info1 = {[m
+[32m+[m	[32m.scl = {[m
+[32m+[m		[32m.i2c_mode = MX6_PAD_KEY_COL3__I2C2_SCL | I2C_PAD,[m
+[32m+[m		[32m.gpio_mode = MX6_PAD_KEY_COL3__GPIO4_IO12 | I2C_PAD,[m
+[32m+[m		[32m.gp = IMX_GPIO_NR(4, 12)[m
+[32m+[m	[32m},[m
+[32m+[m	[32m.sda = {[m
+[32m+[m		[32m.i2c_mode = MX6_PAD_KEY_ROW3__I2C2_SDA | I2C_PAD,[m
+[32m+[m		[32m.gpio_mode = MX6_PAD_KEY_ROW3__GPIO4_IO13 | I2C_PAD,[m
+[32m+[m		[32m.gp = IMX_GPIO_NR(4, 13)[m
+[32m+[m	[32m}[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic void setup_spi(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mimx_iomux_v3_setup_multiple_pads(ecspi1_pads, ARRAY_SIZE(ecspi1_pads));[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32miomux_v3_cfg_t const pcie_pads[] = {[m
+[32m+[m	[32mMX6_PAD_EIM_D19__GPIO3_IO19 | MUX_PAD_CTRL(NO_PAD_CTRL),	/* POWER */[m
+[32m+[m	[32mMX6_PAD_GPIO_17__GPIO7_IO12 | MUX_PAD_CTRL(NO_PAD_CTRL),	/* RESET */[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic void setup_pcie(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mimx_iomux_v3_setup_multiple_pads(pcie_pads, ARRAY_SIZE(pcie_pads));[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32miomux_v3_cfg_t const di0_pads[] = {[m
+[32m+[m	[32mMX6_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,	/* DISP0_CLK */[m
+[32m+[m	[32mMX6_PAD_DI0_PIN2__IPU1_DI0_PIN02,		/* DISP0_HSYNC */[m
+[32m+[m	[32mMX6_PAD_DI0_PIN3__IPU1_DI0_PIN03,		/* DISP0_VSYNC */[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic void setup_iomux_uart(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mimx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_FSL_ESDHC[m
+[32m+[m[32mstruct fsl_esdhc_cfg usdhc_cfg[3] = {[m
+[32m+[m	[32m{USDHC2_BASE_ADDR},[m
+[32m+[m	[32m{USDHC3_BASE_ADDR},[m
+[32m+[m	[32m{USDHC4_BASE_ADDR},[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32m#define USDHC2_CD_GPIO	IMX_GPIO_NR(2, 2)[m
+[32m+[m[32m#define USDHC3_CD_GPIO	IMX_GPIO_NR(2, 0)[m
+[32m+[m
+[32m+[m[32mint board_mmc_getcd(struct mmc *mmc)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;[m
+[32m+[m	[32mint ret = 0;[m
+[32m+[m
+[32m+[m	[32mswitch (cfg->esdhc_base) {[m
+[32m+[m	[32mcase USDHC2_BASE_ADDR:[m
+[32m+[m		[32mret = !gpio_get_value(USDHC2_CD_GPIO);[m
+[32m+[m		[32mbreak;[m
+[32m+[m	[32mcase USDHC3_BASE_ADDR:[m
+[32m+[m		[32mret = !gpio_get_value(USDHC3_CD_GPIO);[m
+[32m+[m		[32mbreak;[m
+[32m+[m	[32mcase USDHC4_BASE_ADDR:[m
+[32m+[m		[32mret = 1; /* eMMC/uSDHC4 is always present */[m
+[32m+[m		[32mbreak;[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn ret;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mint board_mmc_init(bd_t *bis)[m
+[32m+[m[32m{[m
+[32m+[m[32m#ifndef CONFIG_SPL_BUILD[m
+[32m+[m	[32mint ret;[m
+[32m+[m	[32mint i;[m
+[32m+[m
+[32m+[m	[32m/*[m
+[32m+[m	[32m * According to the board_mmc_init() the following map is done:[m
+[32m+[m	[32m * (U-boot device node)    (Physical Port)[m
+[32m+[m	[32m * mmc0                    SD2[m
+[32m+[m	[32m * mmc1                    SD3[m
+[32m+[m	[32m * mmc2                    eMMC[m
+[32m+[m	[32m */[m
+[32m+[m	[32mfor (i = 0; i < CONFIG_SYS_FSL_USDHC_NUM; i++) {[m
+[32m+[m		[32mswitch (i) {[m
+[32m+[m		[32mcase 0:[m
+[32m+[m			[32mimx_iomux_v3_setup_multiple_pads([m
+[32m+[m				[32musdhc2_pads, ARRAY_SIZE(usdhc2_pads));[m
+[32m+[m			[32mgpio_direction_input(USDHC2_CD_GPIO);[m
+[32m+[m			[32musdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);[m
+[32m+[m			[32mbreak;[m
+[32m+[m		[32mcase 1:[m
+[32m+[m			[32mimx_iomux_v3_setup_multiple_pads([m
+[32m+[m				[32musdhc3_pads, ARRAY_SIZE(usdhc3_pads));[m
+[32m+[m			[32mgpio_direction_input(USDHC3_CD_GPIO);[m
+[32m+[m			[32musdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);[m
+[32m+[m			[32mbreak;[m
+[32m+[m		[32mcase 2:[m
+[32m+[m			[32mimx_iomux_v3_setup_multiple_pads([m
+[32m+[m				[32musdhc4_pads, ARRAY_SIZE(usdhc4_pads));[m
+[32m+[m			[32musdhc_cfg[2].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);[m
+[32m+[m			[32mbreak;[m
+[32m+[m		[32mdefault:[m
+[32m+[m			[32mprintf("Warning: you configured more USDHC controllers"[m
+[32m+[m			[32m       "(%d) then supported by the board (%d)\n",[m
+[32m+[m			[32m       i + 1, CONFIG_SYS_FSL_USDHC_NUM);[m
+[32m+[m			[32mreturn -EINVAL;[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mret = fsl_esdhc_initialize(bis, &usdhc_cfg[i]);[m
+[32m+[m		[32mif (ret)[m
+[32m+[m			[32mreturn ret;[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m#else[m
+[32m+[m	[32mstruct src *psrc = (struct src *)SRC_BASE_ADDR;[m
+[32m+[m	[32munsigned reg = readl(&psrc->sbmr1) >> 11;[m
+[32m+[m	[32m/*[m
+[32m+[m	[32m * Upon reading BOOT_CFG register the following map is done:[m
+[32m+[m	[32m * Bit 11 and 12 of BOOT_CFG register can determine the current[m
+[32m+[m	[32m * mmc port[m
+[32m+[m	[32m * 0x1                  SD1[m
+[32m+[m	[32m * 0x2                  SD2[m
+[32m+[m	[32m * 0x3                  SD4[m
+[32m+[m	[32m */[m
+[32m+[m
+[32m+[m	[32mswitch (reg & 0x3) {[m
+[32m+[m	[32mcase 0x1:[m
+[32m+[m		[32mimx_iomux_v3_setup_multiple_pads([m
+[32m+[m			[32musdhc2_pads, ARRAY_SIZE(usdhc2_pads));[m
+[32m+[m		[32musdhc_cfg[0].esdhc_base = USDHC2_BASE_ADDR;[m
+[32m+[m		[32musdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);[m
+[32m+[m		[32mgd->arch.sdhc_clk = usdhc_cfg[0].sdhc_clk;[m
+[32m+[m		[32mbreak;[m
+[32m+[m	[32mcase 0x2:[m
+[32m+[m		[32mimx_iomux_v3_setup_multiple_pads([m
+[32m+[m			[32musdhc3_pads, ARRAY_SIZE(usdhc3_pads));[m
+[32m+[m		[32musdhc_cfg[0].esdhc_base = USDHC3_BASE_ADDR;[m
+[32m+[m		[32musdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);[m
+[32m+[m		[32mgd->arch.sdhc_clk = usdhc_cfg[0].sdhc_clk;[m
+[32m+[m		[32mbreak;[m
+[32m+[m	[32mcase 0x3:[m
+[32m+[m		[32mimx_iomux_v3_setup_multiple_pads([m
+[32m+[m			[32musdhc4_pads, ARRAY_SIZE(usdhc4_pads));[m
+[32m+[m		[32musdhc_cfg[0].esdhc_base = USDHC4_BASE_ADDR;[m
+[32m+[m		[32musdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);[m
+[32m+[m		[32mgd->arch.sdhc_clk = usdhc_cfg[0].sdhc_clk;[m
+[32m+[m		[32mbreak;[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn fsl_esdhc_initialize(bis, &usdhc_cfg[0]);[m
+[32m+[m[32m#endif[m
+[32m+[m[32m}[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32mint mx6_rgmii_rework(struct phy_device *phydev)[m
+[32m+[m[32m{[m
+[32m+[m	[32munsigned short val;[m
+[32m+[m
+[32m+[m	[32m/* To enable AR8031 ouput a 125MHz clk from CLK_25M */[m
+[32m+[m	[32mphy_write(phydev, MDIO_DEVAD_NONE, 0xd, 0x7);[m
+[32m+[m	[32mphy_write(phydev, MDIO_DEVAD_NONE, 0xe, 0x8016);[m
+[32m+[m	[32mphy_write(phydev, MDIO_DEVAD_NONE, 0xd, 0x4007);[m
+[32m+[m
+[32m+[m	[32mval = phy_read(phydev, MDIO_DEVAD_NONE, 0xe);[m
+[32m+[m	[32mval &= 0xffe3;[m
+[32m+[m	[32mval |= 0x18;[m
+[32m+[m	[32mphy_write(phydev, MDIO_DEVAD_NONE, 0xe, val);[m
+[32m+[m
+[32m+[m	[32m/* introduce tx clock delay */[m
+[32m+[m	[32mphy_write(phydev, MDIO_DEVAD_NONE, 0x1d, 0x5);[m
+[32m+[m	[32mval = phy_read(phydev, MDIO_DEVAD_NONE, 0x1e);[m
+[32m+[m	[32mval |= 0x0100;[m
+[32m+[m	[32mphy_write(phydev, MDIO_DEVAD_NONE, 0x1e, val);[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mint board_phy_config(struct phy_device *phydev)[m
+[32m+[m[32m{[m
+[32m+[m	[32mmx6_rgmii_rework(phydev);[m
+[32m+[m
+[32m+[m	[32mif (phydev->drv->config)[m
+[32m+[m		[32mphydev->drv->config(phydev);[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m#if defined(CONFIG_VIDEO_IPUV3)[m
+[32m+[m[32mstatic void disable_lvds(struct display_info_t const *dev)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;[m
+[32m+[m
+[32m+[m	[32mint reg = readl(&iomux->gpr[2]);[m
+[32m+[m
+[32m+[m	[32mreg &= ~(IOMUXC_GPR2_LVDS_CH0_MODE_MASK |[m
+[32m+[m		[32m IOMUXC_GPR2_LVDS_CH1_MODE_MASK);[m
+[32m+[m
+[32m+[m	[32mwritel(reg, &iomux->gpr[2]);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstatic void do_enable_hdmi(struct display_info_t const *dev)[m
+[32m+[m[32m{[m
+[32m+[m	[32mdisable_lvds(dev);[m
+[32m+[m	[32mimx_enable_hdmi_phy();[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstatic void enable_lvds(struct display_info_t const *dev)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct iomuxc *iomux = (struct iomuxc *)[m
+[32m+[m				[32mIOMUXC_BASE_ADDR;[m
+[32m+[m	[32mu32 reg = readl(&iomux->gpr[2]);[m
+[32m+[m	[32mreg |= IOMUXC_GPR2_DATA_WIDTH_CH0_18BIT |[m
+[32m+[m	[32m       IOMUXC_GPR2_DATA_WIDTH_CH1_18BIT;[m
+[32m+[m	[32mwritel(reg, &iomux->gpr[2]);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstruct display_info_t const displays[] = {{[m
+[32m+[m	[32m.bus	= -1,[m
+[32m+[m	[32m.addr	= 0,[m
+[32m+[m	[32m.pixfmt	= IPU_PIX_FMT_RGB666,[m
+[32m+[m	[32m.detect	= NULL,[m
+[32m+[m	[32m.enable	= enable_lvds,[m
+[32m+[m	[32m.mode	= {[m
+[32m+[m		[32m.name           = "Hannstar-XGA",[m
+[32m+[m		[32m.refresh        = 60,[m
+[32m+[m		[32m.xres           = 1024,[m
+[32m+[m		[32m.yres           = 768,[m
+[32m+[m		[32m.pixclock       = 15385,[m
+[32m+[m		[32m.left_margin    = 220,[m
+[32m+[m		[32m.right_margin   = 40,[m
+[32m+[m		[32m.upper_margin   = 21,[m
+[32m+[m		[32m.lower_margin   = 7,[m
+[32m+[m		[32m.hsync_len      = 60,[m
+[32m+[m		[32m.vsync_len      = 10,[m
+[32m+[m		[32m.sync           = FB_SYNC_EXT,[m
+[32m+[m		[32m.vmode          = FB_VMODE_NONINTERLACED[m
+[32m+[m[32m} }, {[m
+[32m+[m	[32m.bus	= -1,[m
+[32m+[m	[32m.addr	= 0,[m
+[32m+[m	[32m.pixfmt	= IPU_PIX_FMT_RGB24,[m
+[32m+[m	[32m.detect	= detect_hdmi,[m
+[32m+[m	[32m.enable	= do_enable_hdmi,[m
+[32m+[m	[32m.mode	= {[m
+[32m+[m		[32m.name           = "HDMI",[m
+[32m+[m		[32m.refresh        = 60,[m
+[32m+[m		[32m.xres           = 1024,[m
+[32m+[m		[32m.yres           = 768,[m
+[32m+[m		[32m.pixclock       = 15385,[m
+[32m+[m		[32m.left_margin    = 220,[m
+[32m+[m		[32m.right_margin   = 40,[m
+[32m+[m		[32m.upper_margin   = 21,[m
+[32m+[m		[32m.lower_margin   = 7,[m
+[32m+[m		[32m.hsync_len      = 60,[m
+[32m+[m		[32m.vsync_len      = 10,[m
+[32m+[m		[32m.sync           = FB_SYNC_EXT,[m
+[32m+[m		[32m.vmode          = FB_VMODE_NONINTERLACED[m
+[32m+[m[32m} }, {[m
+[32m+[m	[32m.bus	= 0,[m
+[32m+[m	[32m.addr	= 0,[m
+[32m+[m	[32m.pixfmt	= IPU_PIX_FMT_RGB24,[m
+[32m+[m	[32m.detect	= NULL,[m
+[32m+[m	[32m.enable	= enable_rgb,[m
+[32m+[m	[32m.mode	= {[m
+[32m+[m		[32m.name           = "SEIKO-WVGA",[m
+[32m+[m		[32m.refresh        = 60,[m
+[32m+[m		[32m.xres           = 800,[m
+[32m+[m		[32m.yres           = 480,[m
+[32m+[m		[32m.pixclock       = 29850,[m
+[32m+[m		[32m.left_margin    = 89,[m
+[32m+[m		[32m.right_margin   = 164,[m
+[32m+[m		[32m.upper_margin   = 23,[m
+[32m+[m		[32m.lower_margin   = 10,[m
+[32m+[m		[32m.hsync_len      = 10,[m
+[32m+[m		[32m.vsync_len      = 10,[m
+[32m+[m		[32m.sync           = 0,[m
+[32m+[m		[32m.vmode          = FB_VMODE_NONINTERLACED[m
+[32m+[m[32m} } };[m
+[32m+[m[32msize_t display_count = ARRAY_SIZE(displays);[m
+[32m+[m
+[32m+[m[32mstatic void setup_display(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;[m
+[32m+[m	[32mstruct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;[m
+[32m+[m	[32mint reg;[m
+[32m+[m
+[32m+[m	[32m/* Setup HSYNC, VSYNC, DISP_CLK for debugging purposes */[m
+[32m+[m	[32mimx_iomux_v3_setup_multiple_pads(di0_pads, ARRAY_SIZE(di0_pads));[m
+[32m+[m
+[32m+[m	[32menable_ipu_clock();[m
+[32m+[m	[32mimx_setup_hdmi();[m
+[32m+[m
+[32m+[m	[32m/* Turn on LDB0, LDB1, IPU,IPU DI0 clocks */[m
+[32m+[m	[32mreg = readl(&mxc_ccm->CCGR3);[m
+[32m+[m	[32mreg |=  MXC_CCM_CCGR3_LDB_DI0_MASK | MXC_CCM_CCGR3_LDB_DI1_MASK;[m
+[32m+[m	[32mwritel(reg, &mxc_ccm->CCGR3);[m
+[32m+[m
+[32m+[m	[32m/* set LDB0, LDB1 clk select to 011/011 */[m
+[32m+[m	[32mreg = readl(&mxc_ccm->cs2cdr);[m
+[32m+[m	[32mreg &= ~(MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_MASK[m
+[32m+[m		[32m | MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_MASK);[m
+[32m+[m	[32mreg |= (3 << MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_OFFSET)[m
+[32m+[m	[32m      | (3 << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET);[m
+[32m+[m	[32mwritel(reg, &mxc_ccm->cs2cdr);[m
+[32m+[m
+[32m+[m	[32mreg = readl(&mxc_ccm->cscmr2);[m
+[32m+[m	[32mreg |= MXC_CCM_CSCMR2_LDB_DI0_IPU_DIV | MXC_CCM_CSCMR2_LDB_DI1_IPU_DIV;[m
+[32m+[m	[32mwritel(reg, &mxc_ccm->cscmr2);[m
+[32m+[m
+[32m+[m	[32mreg = readl(&mxc_ccm->chsccdr);[m
+[32m+[m	[32mreg |= (CHSCCDR_CLK_SEL_LDB_DI0[m
+[32m+[m		[32m<< MXC_CCM_CHSCCDR_IPU1_DI0_CLK_SEL_OFFSET);[m
+[32m+[m	[32mreg |= (CHSCCDR_CLK_SEL_LDB_DI0[m
+[32m+[m		[32m<< MXC_CCM_CHSCCDR_IPU1_DI1_CLK_SEL_OFFSET);[m
+[32m+[m	[32mwritel(reg, &mxc_ccm->chsccdr);[m
+[32m+[m
+[32m+[m	[32mreg = IOMUXC_GPR2_BGREF_RRMODE_EXTERNAL_RES[m
+[32m+[m	[32m     | IOMUXC_GPR2_DI1_VS_POLARITY_ACTIVE_LOW[m
+[32m+[m	[32m     | IOMUXC_GPR2_DI0_VS_POLARITY_ACTIVE_LOW[m
+[32m+[m	[32m     | IOMUXC_GPR2_BIT_MAPPING_CH1_SPWG[m
+[32m+[m	[32m     | IOMUXC_GPR2_DATA_WIDTH_CH1_18BIT[m
+[32m+[m	[32m     | IOMUXC_GPR2_BIT_MAPPING_CH0_SPWG[m
+[32m+[m	[32m     | IOMUXC_GPR2_DATA_WIDTH_CH0_18BIT[m
+[32m+[m	[32m     | IOMUXC_GPR2_LVDS_CH0_MODE_DISABLED[m
+[32m+[m	[32m     | IOMUXC_GPR2_LVDS_CH1_MODE_ENABLED_DI0;[m
+[32m+[m	[32mwritel(reg, &iomux->gpr[2]);[m
+[32m+[m
+[32m+[m	[32mreg = readl(&iomux->gpr[3]);[m
+[32m+[m	[32mreg = (reg & ~(IOMUXC_GPR3_LVDS1_MUX_CTL_MASK[m
+[32m+[m			[32m| IOMUXC_GPR3_HDMI_MUX_CTL_MASK))[m
+[32m+[m	[32m    | (IOMUXC_GPR3_MUX_SRC_IPU1_DI0[m
+[32m+[m	[32m       << IOMUXC_GPR3_LVDS1_MUX_CTL_OFFSET);[m
+[32m+[m	[32mwritel(reg, &iomux->gpr[3]);[m
+[32m+[m[32m}[m
+[32m+[m[32m#endif /* CONFIG_VIDEO_IPUV3 */[m
+[32m+[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Do not overwrite the console[m
+[32m+[m[32m * Use always serial for U-Boot console[m
+[32m+[m[32m */[m
+[32m+[m[32mint overwrite_console(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mreturn 1;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mint board_eth_init(bd_t *bis)[m
+[32m+[m[32m{[m
+[32m+[m	[32msetup_iomux_enet();[m
+[32m+[m	[32msetup_pcie();[m
+[32m+[m
+[32m+[m	[32mreturn cpu_eth_init(bis);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_USB_EHCI_MX6[m
+[32m+[m[32m#define USB_OTHERREGS_OFFSET	0x800[m
+[32m+[m[32m#define UCTRL_PWR_POL		(1 << 9)[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const usb_otg_pads[] = {[m
+[32m+[m	[32mMX6_PAD_EIM_D22__USB_OTG_PWR | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m	[32mMX6_PAD_ENET_RX_ER__USB_OTG_ID | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic iomux_v3_cfg_t const usb_hc1_pads[] = {[m
+[32m+[m	[32mMX6_PAD_ENET_TXD1__GPIO1_IO29 | MUX_PAD_CTRL(NO_PAD_CTRL),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic void setup_usb(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mimx_iomux_v3_setup_multiple_pads(usb_otg_pads,[m
+[32m+[m					[32m ARRAY_SIZE(usb_otg_pads));[m
+[32m+[m
+[32m+[m	[32m/*[m
+[32m+[m	[32m * set daisy chain for otg_pin_id on 6q.[m
+[32m+[m	[32m * for 6dl, this bit is reserved[m
+[32m+[m	[32m */[m
+[32m+[m	[32mimx_iomux_set_gpr_register(1, 13, 1, 0);[m
+[32m+[m
+[32m+[m	[32mimx_iomux_v3_setup_multiple_pads(usb_hc1_pads,[m
+[32m+[m					[32m ARRAY_SIZE(usb_hc1_pads));[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mint board_ehci_hcd_init(int port)[m
+[32m+[m[32m{[m
+[32m+[m	[32mu32 *usbnc_usb_ctrl;[m
+[32m+[m
+[32m+[m	[32mif (port > 1)[m
+[32m+[m		[32mreturn -EINVAL;[m
+[32m+[m
+[32m+[m	[32musbnc_usb_ctrl = (u32 *)(USB_BASE_ADDR + USB_OTHERREGS_OFFSET +[m
+[32m+[m				[32m port * 4);[m
+[32m+[m
+[32m+[m	[32msetbits_le32(usbnc_usb_ctrl, UCTRL_PWR_POL);[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mint board_ehci_power(int port, int on)[m
+[32m+[m[32m{[m
+[32m+[m	[32mswitch (port) {[m
+[32m+[m	[32mcase 0:[m
+[32m+[m		[32mbreak;[m
+[32m+[m	[32mcase 1:[m
+[32m+[m		[32mif (on)[m
+[32m+[m			[32mgpio_direction_output(IMX_GPIO_NR(1, 29), 1);[m
+[32m+[m		[32melse[m
+[32m+[m			[32mgpio_direction_output(IMX_GPIO_NR(1, 29), 0);[m
+[32m+[m		[32mbreak;[m
+[32m+[m	[32mdefault:[m
+[32m+[m		[32mprintf("MXC USB port %d not yet supported\n", port);[m
+[32m+[m		[32mreturn -EINVAL;[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32mint board_early_init_f(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32msetup_iomux_uart();[m
+[32m+[m[32m#if defined(CONFIG_VIDEO_IPUV3)[m
+[32m+[m	[32msetup_display();[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mint board_init(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32m/* address of boot parameters */[m
+[32m+[m	[32mgd->bd->bi_boot_params = PHYS_SDRAM + 0x100;[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_MXC_SPI[m
+[32m+[m	[32msetup_spi();[m
+[32m+[m[32m#endif[m
+[32m+[m	[32msetup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_USB_EHCI_MX6[m
+[32m+[m	[32msetup_usb();[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mint power_init_board(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct pmic *p;[m
+[32m+[m	[32munsigned int reg;[m
+[32m+[m	[32mint ret;[m
+[32m+[m
+[32m+[m	[32mp = pfuze_common_init(I2C_PMIC);[m
+[32m+[m	[32mif (!p)[m
+[32m+[m		[32mreturn -ENODEV;[m
+[32m+[m
+[32m+[m	[32mret = pfuze_mode_init(p, APS_PFM);[m
+[32m+[m	[32mif (ret < 0)[m
+[32m+[m		[32mreturn ret;[m
+[32m+[m
+[32m+[m	[32m/* Increase VGEN3 from 2.5 to 2.8V */[m
+[32m+[m	[32mpmic_reg_read(p, PFUZE100_VGEN3VOL, &reg);[m
+[32m+[m	[32mreg &= ~LDO_VOL_MASK;[m
+[32m+[m	[32mreg |= LDOB_2_80V;[m
+[32m+[m	[32mpmic_reg_write(p, PFUZE100_VGEN3VOL, reg);[m
+[32m+[m
+[32m+[m	[32m/* Increase VGEN5 from 2.8 to 3V */[m
+[32m+[m	[32mpmic_reg_read(p, PFUZE100_VGEN5VOL, &reg);[m
+[32m+[m	[32mreg &= ~LDO_VOL_MASK;[m
+[32m+[m	[32mreg |= LDOB_3_00V;[m
+[32m+[m	[32mpmic_reg_write(p, PFUZE100_VGEN5VOL, reg);[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_MXC_SPI[m
+[32m+[m[32mint board_spi_cs_gpio(unsigned bus, unsigned cs)[m
+[32m+[m[32m{[m
+[32m+[m	[32mreturn (bus == 0 && cs == 0) ? (IMX_GPIO_NR(4, 9)) : -1;[m
+[32m+[m[32m}[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_CMD_BMODE[m
+[32m+[m[32mstatic const struct boot_mode board_boot_modes[] = {[m
+[32m+[m	[32m/* 4 bit bus width */[m
+[32m+[m	[32m{"sd2",	 MAKE_CFGVAL(0x40, 0x28, 0x00, 0x00)},[m
+[32m+[m	[32m{"sd3",	 MAKE_CFGVAL(0x40, 0x30, 0x00, 0x00)},[m
+[32m+[m	[32m/* 8 bit bus width */[m
+[32m+[m	[32m{"emmc", MAKE_CFGVAL(0x40, 0x38, 0x00, 0x00)},[m
+[32m+[m	[32m{NULL,	 0},[m
+[32m+[m[32m};[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32mint board_late_init(void)[m
+[32m+[m[32m{[m
+[32m+[m[32m#ifdef CONFIG_CMD_BMODE[m
+[32m+[m	[32madd_board_boot_modes(board_boot_modes);[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG[m
+[32m+[m	[32msetenv("board_name", "SABRESD");[m
+[32m+[m
+[32m+[m	[32mif (is_mx6dqp())[m
+[32m+[m		[32msetenv("board_rev", "MX6QP");[m
+[32m+[m	[32melse if (is_cpu_type(MXC_CPU_MX6Q) || is_cpu_type(MXC_CPU_MX6D))[m
+[32m+[m		[32msetenv("board_rev", "MX6Q");[m
+[32m+[m	[32melse if (is_cpu_type(MXC_CPU_MX6DL) || is_cpu_type(MXC_CPU_MX6SOLO))[m
+[32m+[m		[32msetenv("board_rev", "MX6DL");[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mint checkboard(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mputs("Board: MX6-SabreSD\n");[m
+[32m+[m	[32mreturn 0;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_SPL_BUILD[m
+[32m+[m[32m#include <spl.h>[m
+[32m+[m[32m#include <libfdt.h>[m
+[32m+[m
+[32m+[m[32mconst struct mx6dq_iomux_ddr_regs mx6_ddr_ioregs = {[m
+[32m+[m	[32m.dram_sdclk_0 =  0x00020030,[m
+[32m+[m	[32m.dram_sdclk_1 =  0x00020030,[m
+[32m+[m	[32m.dram_cas =  0x00020030,[m
+[32m+[m	[32m.dram_ras =  0x00020030,[m
+[32m+[m	[32m.dram_reset =  0x00020030,[m
+[32m+[m	[32m.dram_sdcke0 =  0x00003000,[m
+[32m+[m	[32m.dram_sdcke1 =  0x00003000,[m
+[32m+[m	[32m.dram_sdba2 =  0x00000000,[m
+[32m+[m	[32m.dram_sdodt0 =  0x00003030,[m
+[32m+[m	[32m.dram_sdodt1 =  0x00003030,[m
+[32m+[m	[32m.dram_sdqs0 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs1 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs2 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs3 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs4 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs5 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs6 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs7 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm0 =  0x00020030,[m
+[32m+[m	[32m.dram_dqm1 =  0x00020030,[m
+[32m+[m	[32m.dram_dqm2 =  0x00020030,[m
+[32m+[m	[32m.dram_dqm3 =  0x00020030,[m
+[32m+[m	[32m.dram_dqm4 =  0x00020030,[m
+[32m+[m	[32m.dram_dqm5 =  0x00020030,[m
+[32m+[m	[32m.dram_dqm6 =  0x00020030,[m
+[32m+[m	[32m.dram_dqm7 =  0x00020030,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst struct mx6dq_iomux_ddr_regs mx6dqp_ddr_ioregs = {[m
+[32m+[m	[32m.dram_sdclk_0 =  0x00000030,[m
+[32m+[m	[32m.dram_sdclk_1 =  0x00000030,[m
+[32m+[m	[32m.dram_cas =  0x00000030,[m
+[32m+[m	[32m.dram_ras =  0x00000030,[m
+[32m+[m	[32m.dram_reset =  0x00000030,[m
+[32m+[m	[32m.dram_sdcke0 =  0x00003000,[m
+[32m+[m	[32m.dram_sdcke1 =  0x00003000,[m
+[32m+[m	[32m.dram_sdba2 =  0x00000000,[m
+[32m+[m	[32m.dram_sdodt0 =  0x00003030,[m
+[32m+[m	[32m.dram_sdodt1 =  0x00003030,[m
+[32m+[m	[32m.dram_sdqs0 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs1 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs2 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs3 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs4 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs5 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs6 =  0x00000030,[m
+[32m+[m	[32m.dram_sdqs7 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm0 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm1 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm2 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm3 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm4 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm5 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm6 =  0x00000030,[m
+[32m+[m	[32m.dram_dqm7 =  0x00000030,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst struct mx6dq_iomux_grp_regs mx6_grp_ioregs = {[m
+[32m+[m	[32m.grp_ddr_type =  0x000C0000,[m
+[32m+[m	[32m.grp_ddrmode_ctl =  0x00020000,[m
+[32m+[m	[32m.grp_ddrpke =  0x00000000,[m
+[32m+[m	[32m.grp_addds =  0x00000030,[m
+[32m+[m	[32m.grp_ctlds =  0x00000030,[m
+[32m+[m	[32m.grp_ddrmode =  0x00020000,[m
+[32m+[m	[32m.grp_b0ds =  0x00000030,[m
+[32m+[m	[32m.grp_b1ds =  0x00000030,[m
+[32m+[m	[32m.grp_b2ds =  0x00000030,[m
+[32m+[m	[32m.grp_b3ds =  0x00000030,[m
+[32m+[m	[32m.grp_b4ds =  0x00000030,[m
+[32m+[m	[32m.grp_b5ds =  0x00000030,[m
+[32m+[m	[32m.grp_b6ds =  0x00000030,[m
+[32m+[m	[32m.grp_b7ds =  0x00000030,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst struct mx6_mmdc_calibration mx6_mmcd_calib = {[m
+[32m+[m	[32m.p0_mpwldectrl0 =  0x001F001F,[m
+[32m+[m	[32m.p0_mpwldectrl1 =  0x001F001F,[m
+[32m+[m	[32m.p1_mpwldectrl0 =  0x00440044,[m
+[32m+[m	[32m.p1_mpwldectrl1 =  0x00440044,[m
+[32m+[m	[32m.p0_mpdgctrl0 =  0x434B0350,[m
+[32m+[m	[32m.p0_mpdgctrl1 =  0x034C0359,[m
+[32m+[m	[32m.p1_mpdgctrl0 =  0x434B0350,[m
+[32m+[m	[32m.p1_mpdgctrl1 =  0x03650348,[m
+[32m+[m	[32m.p0_mprddlctl =  0x4436383B,[m
+[32m+[m	[32m.p1_mprddlctl =  0x39393341,[m
+[32m+[m	[32m.p0_mpwrdlctl =  0x35373933,[m
+[32m+[m	[32m.p1_mpwrdlctl =  0x48254A36,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst struct mx6_mmdc_calibration mx6dqp_mmcd_calib = {[m
+[32m+[m	[32m.p0_mpwldectrl0 =  0x001B001E,[m
+[32m+[m	[32m.p0_mpwldectrl1 =  0x002E0029,[m
+[32m+[m	[32m.p1_mpwldectrl0 =  0x001B002A,[m
+[32m+[m	[32m.p1_mpwldectrl1 =  0x0019002C,[m
+[32m+[m	[32m.p0_mpdgctrl0 =  0x43240334,[m
+[32m+[m	[32m.p0_mpdgctrl1 =  0x0324031A,[m
+[32m+[m	[32m.p1_mpdgctrl0 =  0x43340344,[m
+[32m+[m	[32m.p1_mpdgctrl1 =  0x03280276,[m
+[32m+[m	[32m.p0_mprddlctl =  0x44383A3E,[m
+[32m+[m	[32m.p1_mprddlctl =  0x3C3C3846,[m
+[32m+[m	[32m.p0_mpwrdlctl =  0x2E303230,[m
+[32m+[m	[32m.p1_mpwrdlctl =  0x38283E34,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32m/* MT41K128M16JT-125 */[m
+[32m+[m[32mstatic struct mx6_ddr3_cfg mem_ddr = {[m
+[32m+[m	[32m.mem_speed = 1600,[m
+[32m+[m	[32m.density = 2,[m
+[32m+[m	[32m.width = 16,[m
+[32m+[m	[32m.banks = 8,[m
+[32m+[m	[32m.rowaddr = 14,[m
+[32m+[m	[32m.coladdr = 10,[m
+[32m+[m	[32m.pagesz = 2,[m
+[32m+[m	[32m.trcd = 1375,[m
+[32m+[m	[32m.trcmin = 4875,[m
+[32m+[m	[32m.trasmin = 3500,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mstatic void ccgr_init(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct mxc_ccm_reg *ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;[m
+[32m+[m
+[32m+[m	[32mwritel(0x00C03F3F, &ccm->CCGR0);[m
+[32m+[m	[32mwritel(0x0030FC03, &ccm->CCGR1);[m
+[32m+[m	[32mwritel(0x0FFFC000, &ccm->CCGR2);[m
+[32m+[m	[32mwritel(0x3FF00000, &ccm->CCGR3);[m
+[32m+[m	[32mwritel(0x00FFF300, &ccm->CCGR4);[m
+[32m+[m	[32mwritel(0x0F0000C3, &ccm->CCGR5);[m
+[32m+[m	[32mwritel(0x000003FF, &ccm->CCGR6);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstatic void gpr_init(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;[m
+[32m+[m
+[32m+[m	[32m/* enable AXI cache for VDOA/VPU/IPU */[m
+[32m+[m	[32mwritel(0xF00000CF, &iomux->gpr[4]);[m
+[32m+[m	[32mif (is_mx6dqp()) {[m
+[32m+[m		[32m/* set IPU AXI-id1 Qos=0x1 AXI-id0/2/3 Qos=0x7 */[m
+[32m+[m		[32mwritel(0x007F007F, &iomux->gpr[6]);[m
+[32m+[m		[32mwritel(0x007F007F, &iomux->gpr[7]);[m
+[32m+[m	[32m} else {[m
+[32m+[m		[32m/* set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7 */[m
+[32m+[m		[32mwritel(0x007F007F, &iomux->gpr[6]);[m
+[32m+[m		[32mwritel(0x007F007F, &iomux->gpr[7]);[m
+[32m+[m	[32m}[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/*[m
+[32m+[m[32m * This section requires the differentiation between iMX6 Sabre boards, but[m
+[32m+[m[32m * for now, it will configure only for the mx6q variant.[m
+[32m+[m[32m */[m
+[32m+[m[32mstatic void spl_dram_init(void)[m
+[32m+[m[32m{[m
+[32m+[m	[32mstruct mx6_ddr_sysinfo sysinfo = {[m
+[32m+[m		[32m/* width of data bus:0=16,1=32,2=64 */[m
+[32m+[m		[32m.dsize = 2,[m
+[32m+[m		[32m/* config for full 4GB range so that get_mem_size() works */[m
+[32m+[m		[32m.cs_density = 32, /* 32Gb per CS */[m
+[32m+[m		[32m/* single chip select */[m
+[32m+[m		[32m.ncs = 1,[m
+[32m+[m		[32m.cs1_mirror = 0,[m
+[32m+[m		[32m.rtt_wr = 1 /*DDR3_RTT_60_OHM*/,	/* RTT_Wr = RZQ/4 */[m
+[32m+[m		[32m.rtt_nom = 1 /*DDR3_RTT_60_OHM*/,	/* RTT_Nom = RZQ/4 */[m
+[32m+[m		[32m.walat = 1,	/* Write additional latency */[m
+[32m+[m		[32m.ralat = 5,	/* Read additional latency */[m
+[32m+[m		[32m.mif3_mode = 3,	/* Command prediction working mode */[m
+[32m+[m		[32m.bi_on = 1,	/* Bank interleaving enabled */[m
+[32m+[m		[32m.sde_to_rst = 0x10,	/* 14 cycles, 200us (JEDEC default) */[m
+[32m+[m		[32m.rst_to_cke = 0x23,	/* 33 cycles, 500us (JEDEC default) */[m
+[32m+[m		[32m.ddr_type = DDR_TYPE_DDR3,[m
+[32m+[m	[32m};[m
+[32m+[m
+[32m+[m	[32mif (is_mx6dqp()) {[m
+[32m+[m		[32mmx6dq_dram_iocfg(64, &mx6dqp_ddr_ioregs, &mx6_grp_ioregs);[m
+[32m+[m		[32mmx6_dram_cfg(&sysinfo, &mx6dqp_mmcd_calib, &mem_ddr);[m
+[32m+[m	[32m} else {[m
+[32m+[m		[32mmx6dq_dram_iocfg(64, &mx6_ddr_ioregs, &mx6_grp_ioregs);[m
+[32m+[m		[32mmx6_dram_cfg(&sysinfo, &mx6_mmcd_calib, &mem_ddr);[m
+[32m+[m	[32m}[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mvoid board_init_f(ulong dummy)[m
+[32m+[m[32m{[m
+[32m+[m	[32m/* setup AIPS and disable watchdog */[m
+[32m+[m	[32march_cpu_init();[m
+[32m+[m
+[32m+[m	[32mccgr_init();[m
+[32m+[m	[32mgpr_init();[m
+[32m+[m
+[32m+[m	[32m/* iomux and setup of i2c */[m
+[32m+[m	[32mboard_early_init_f();[m
+[32m+[m
+[32m+[m	[32m/* setup GP timer */[m
+[32m+[m	[32mtimer_init();[m
+[32m+[m
+[32m+[m	[32m/* UART clocks enabled and gd valid - init serial console */[m
+[32m+[m	[32mpreloader_console_init();[m
+[32m+[m
+[32m+[m	[32m/* DDR initialization */[m
+[32m+[m	[32mspl_dram_init();[m
+[32m+[m
+[32m+[m	[32m/* Clear the BSS. */[m
+[32m+[m	[32mmemset(__bss_start, 0, __bss_end - __bss_start);[m
+[32m+[m
+[32m+[m	[32m/* load/boot image from boot device */[m
+[32m+[m	[32mboard_init_r(NULL, 0);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mvoid reset_cpu(ulong addr)[m
+[32m+[m[32m{[m
+[32m+[m[32m}[m
+[32m+[m[32m#endif[m
+[1mdiff --git a/board/fedevel/mx6openrex/mx6q_4x_mt41j256.cfg b/board/fedevel/mx6openrex/mx6q_4x_mt41j256.cfg[m
+[1mnew file mode 100644[m
+[1mindex 0000000..bb6c60b[m
+[1m--- /dev/null[m
+[1m+++ b/board/fedevel/mx6openrex/mx6q_4x_mt41j256.cfg[m
+[36m@@ -0,0 +1,169 @@[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Copyright (C) 2011 Freescale Semiconductor, Inc.[m
+[32m+[m[32m * Jason Liu <r64343@freescale.com>[m
+[32m+[m[32m *[m
+[32m+[m[32m * SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m *[m
+[32m+[m[32m * Refer doc/README.imximage for more details about how-to configure[m
+[32m+[m[32m * and create imximage boot image[m
+[32m+[m[32m *[m
+[32m+[m[32m * The syntax is taken as close as possible with the kwbimage[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32m/* image version */[m
+[32m+[m[32mIMAGE_VERSION 2[m
+[32m+[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Boot Device : one of[m
+[32m+[m[32m * spi, sd (the board has no nand neither onenand)[m
+[32m+[m[32m */[m
+[32m+[m[32mBOOT_FROM      sd[m
+[32m+[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Device Configuration Data (DCD)[m
+[32m+[m[32m *[m
+[32m+[m[32m * Each entry must have the format:[m
+[32m+[m[32m * Addr-type           Address        Value[m
+[32m+[m[32m *[m
+[32m+[m[32m * where:[m
+[32m+[m[32m *      Addr-type register length (1,2 or 4 bytes)[m
+[32m+[m[32m *      Address   absolute address of the register[m
+[32m+[m[32m *      value     value to be stored in the register[m
+[32m+[m[32m */[m
+[32m+[m[32mDATA 4 0x020e05a8 0x00000030[m
+[32m+[m[32mDATA 4 0x020e05b0 0x00000030[m
+[32m+[m[32mDATA 4 0x020e0524 0x00000030[m
+[32m+[m[32mDATA 4 0x020e051c 0x00000030[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e0518 0x00000030[m
+[32m+[m[32mDATA 4 0x020e050c 0x00000030[m
+[32m+[m[32mDATA 4 0x020e05b8 0x00000030[m
+[32m+[m[32mDATA 4 0x020e05c0 0x00000030[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e05ac 0x00020030[m
+[32m+[m[32mDATA 4 0x020e05b4 0x00020030[m
+[32m+[m[32mDATA 4 0x020e0528 0x00020030[m
+[32m+[m[32mDATA 4 0x020e0520 0x00020030[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e0514 0x00020030[m
+[32m+[m[32mDATA 4 0x020e0510 0x00020030[m
+[32m+[m[32mDATA 4 0x020e05bc 0x00020030[m
+[32m+[m[32mDATA 4 0x020e05c4 0x00020030[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e056c 0x00020030[m
+[32m+[m[32mDATA 4 0x020e0578 0x00020030[m
+[32m+[m[32mDATA 4 0x020e0588 0x00020030[m
+[32m+[m[32mDATA 4 0x020e0594 0x00020030[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e057c 0x00020030[m
+[32m+[m[32mDATA 4 0x020e0590 0x00003000[m
+[32m+[m[32mDATA 4 0x020e0598 0x00003000[m
+[32m+[m[32mDATA 4 0x020e058c 0x00000000[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e059c 0x00003030[m
+[32m+[m[32mDATA 4 0x020e05a0 0x00003030[m
+[32m+[m[32mDATA 4 0x020e0784 0x00000030[m
+[32m+[m[32mDATA 4 0x020e0788 0x00000030[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e0794 0x00000030[m
+[32m+[m[32mDATA 4 0x020e079c 0x00000030[m
+[32m+[m[32mDATA 4 0x020e07a0 0x00000030[m
+[32m+[m[32mDATA 4 0x020e07a4 0x00000030[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e07a8 0x00000030[m
+[32m+[m[32mDATA 4 0x020e0748 0x00000030[m
+[32m+[m[32mDATA 4 0x020e074c 0x00000030[m
+[32m+[m[32mDATA 4 0x020e0750 0x00020000[m
+[32m+[m
+[32m+[m[32mDATA 4 0x020e0758 0x00000000[m
+[32m+[m[32mDATA 4 0x020e0774 0x00020000[m
+[32m+[m[32mDATA 4 0x020e078c 0x00000030[m
+[32m+[m[32mDATA 4 0x020e0798 0x000C0000[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b081c 0x33333333[m
+[32m+[m[32mDATA 4 0x021b0820 0x33333333[m
+[32m+[m[32mDATA 4 0x021b0824 0x33333333[m
+[32m+[m[32mDATA 4 0x021b0828 0x33333333[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b481c 0x33333333[m
+[32m+[m[32mDATA 4 0x021b4820 0x33333333[m
+[32m+[m[32mDATA 4 0x021b4824 0x33333333[m
+[32m+[m[32mDATA 4 0x021b4828 0x33333333[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b0018 0x00081740[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b001c 0x00008000[m
+[32m+[m[32mDATA 4 0x021b000c 0x555A7974[m
+[32m+[m[32mDATA 4 0x021b0010 0xDB538F64[m
+[32m+[m[32mDATA 4 0x021b0014 0x01FF00DB[m
+[32m+[m[32mDATA 4 0x021b002c 0x000026D2[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b0030 0x005A1023[m
+[32m+[m[32mDATA 4 0x021b0008 0x09444040[m
+[32m+[m[32mDATA 4 0x021b0004 0x00025576[m
+[32m+[m[32mDATA 4 0x021b0040 0x00000027[m
+[32m+[m[32mDATA 4 0x021b0000 0x831A0000[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b001c 0x04088032[m
+[32m+[m[32mDATA 4 0x021b001c 0x0408803A[m
+[32m+[m[32mDATA 4 0x021b001c 0x00008033[m
+[32m+[m[32mDATA 4 0x021b001c 0x0000803B[m
+[32m+[m[32mDATA 4 0x021b001c 0x00428031[m
+[32m+[m[32mDATA 4 0x021b001c 0x00428039[m
+[32m+[m[32mDATA 4 0x021b001c 0x19308030[m
+[32m+[m[32mDATA 4 0x021b001c 0x19308038[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b001c 0x04008040[m
+[32m+[m[32mDATA 4 0x021b001c 0x04008048[m
+[32m+[m[32mDATA 4 0x021b0800 0xA1380003[m
+[32m+[m[32mDATA 4 0x021b4800 0xA1380003[m
+[32m+[m[32mDATA 4 0x021b0020 0x00005800[m
+[32m+[m[32mDATA 4 0x021b0818 0x00022227[m
+[32m+[m[32mDATA 4 0x021b4818 0x00022227[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b083c 0x434B0350[m
+[32m+[m[32mDATA 4 0x021b0840 0x034C0359[m
+[32m+[m[32mDATA 4 0x021b483c 0x434B0350[m
+[32m+[m[32mDATA 4 0x021b4840 0x03650348[m
+[32m+[m[32mDATA 4 0x021b0848 0x4436383B[m
+[32m+[m[32mDATA 4 0x021b4848 0x39393341[m
+[32m+[m[32mDATA 4 0x021b0850 0x35373933[m
+[32m+[m[32mDATA 4 0x021b4850 0x48254A36[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b080c 0x001F001F[m
+[32m+[m[32mDATA 4 0x021b0810 0x001F001F[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b480c 0x00440044[m
+[32m+[m[32mDATA 4 0x021b4810 0x00440044[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b08b8 0x00000800[m
+[32m+[m[32mDATA 4 0x021b48b8 0x00000800[m
+[32m+[m
+[32m+[m[32mDATA 4 0x021b001c 0x00000000[m
+[32m+[m[32mDATA 4 0x021b0404 0x00011006[m
+[32m+[m
+[32m+[m[32m/* set the default clock gate to save power */[m
+[32m+[m[32mDATA 4 0x020c4068 0x00C03F3F[m
+[32m+[m[32mDATA 4 0x020c406c 0x0030FC03[m
+[32m+[m[32mDATA 4 0x020c4070 0x0FFFC000[m
+[32m+[m[32mDATA 4 0x020c4074 0x3FF00000[m
+[32m+[m[32mDATA 4 0x020c4078 0x00FFF300[m
+[32m+[m[32mDATA 4 0x020c407c 0x0F0000C3[m
+[32m+[m[32mDATA 4 0x020c4080 0x000003FF[m
+[32m+[m
+[32m+[m[32m/* enable AXI cache for VDOA/VPU/IPU */[m
+[32m+[m[32mDATA 4 0x020e0010 0xF00000CF[m
+[32m+[m[32m/* set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7 */[m
+[32m+[m[32mDATA 4 0x020e0018 0x007F007F[m
+[32m+[m[32mDATA 4 0x020e001c 0x007F007F[m
+[32m+[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Setup CCM_CCOSR register as follows:[m
+[32m+[m[32m *[m
+[32m+[m[32m * cko1_en  = 1	   --> CKO1 enabled[m
+[32m+[m[32m * cko1_div = 111  --> divide by 8[m
+[32m+[m[32m * cko1_sel = 1011 --> ahb_clk_root[m
+[32m+[m[32m *[m
+[32m+[m[32m * This sets CKO1 at ahb_clk_root/8 = 132/8 = 16.5 MHz[m
+[32m+[m[32m */[m
+[32m+[m[32mDATA 4 0x020c4060 0x000000fb[m
+[1mdiff --git a/configs/mx6dlopenrex_defconfig b/configs/mx6dlopenrex_defconfig[m
+[1mnew file mode 100644[m
+[1mindex 0000000..17be14e[m
+[1m--- /dev/null[m
+[1m+++ b/configs/mx6dlopenrex_defconfig[m
+[36m@@ -0,0 +1,7 @@[m
+[32m+[m[32mCONFIG_ARM=y[m
+[32m+[m[32mCONFIG_ARCH_MX6=y[m
+[32m+[m[32mCONFIG_TARGET_MX6OPENREX=y[m
+[32m+[m[32mCONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/fedevel/mx6openrex/mx6dlopenrex.cfg,MX6DL"[m
+[32m+[m[32m# CONFIG_CMD_IMLS is not set[m
+[32m+[m[32m# CONFIG_CMD_FLASH is not set[m
+[32m+[m[32mCONFIG_SPI_FLASH=y[m
+[1mdiff --git a/configs/mx6openrex_spl_defconfig b/configs/mx6openrex_spl_defconfig[m
+[1mnew file mode 100644[m
+[1mindex 0000000..2e00150[m
+[1m--- /dev/null[m
+[1m+++ b/configs/mx6openrex_spl_defconfig[m
+[36m@@ -0,0 +1,8 @@[m
+[32m+[m[32mCONFIG_ARM=y[m
+[32m+[m[32mCONFIG_ARCH_MX6=y[m
+[32m+[m[32mCONFIG_TARGET_MX6OPENREX=y[m
+[32m+[m[32mCONFIG_SPL=y[m
+[32m+[m[32mCONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=arch/arm/imx-common/spl_sd.cfg,SPL,MX6Q"[m
+[32m+[m[32m# CONFIG_CMD_IMLS is not set[m
+[32m+[m[32m# CONFIG_CMD_FLASH is not set[m
+[32m+[m[32mCONFIG_SPI_FLASH=y[m
+[1mdiff --git a/configs/mx6qopenrex_defconfig b/configs/mx6qopenrex_defconfig[m
+[1mnew file mode 100644[m
+[1mindex 0000000..e1f5a12[m
+[1m--- /dev/null[m
+[1m+++ b/configs/mx6qopenrex_defconfig[m
+[36m@@ -0,0 +1,7 @@[m
+[32m+[m[32mCONFIG_ARM=y[m
+[32m+[m[32mCONFIG_ARCH_MX6=y[m
+[32m+[m[32mCONFIG_TARGET_MX6OPENREX=y[m
+[32m+[m[32mCONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/fedevel/mx6openrex/mx6q_4x_mt41j256.cfg,MX6Q"[m
+[32m+[m[32m# CONFIG_CMD_IMLS is not set[m
+[32m+[m[32m# CONFIG_CMD_FLASH is not set[m
+[32m+[m[32mCONFIG_SPI_FLASH=y[m
+[1mdiff --git a/include/configs/mx6openrex.h b/include/configs/mx6openrex.h[m
+[1mnew file mode 100644[m
+[1mindex 0000000..e4f593a[m
+[1m--- /dev/null[m
+[1m+++ b/include/configs/mx6openrex.h[m
+[36m@@ -0,0 +1,75 @@[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Copyright (C) 2012 Freescale Semiconductor, Inc.[m
+[32m+[m[32m *[m
+[32m+[m[32m * Configuration settings for the Freescale i.MX6Q SabreSD board.[m
+[32m+[m[32m *[m
+[32m+[m[32m * SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32m#ifndef __MX6QSABRESD_CONFIG_H[m
+[32m+[m[32m#define __MX6QSABRESD_CONFIG_H[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_SPL[m
+[32m+[m[32m#define CONFIG_SPL_LIBCOMMON_SUPPORT[m
+[32m+[m[32m#define CONFIG_SPL_MMC_SUPPORT[m
+[32m+[m[32m#include "imx6_spl.h"[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#define CONFIG_MACH_TYPE	3980[m
+[32m+[m[32m#define CONFIG_MXC_UART_BASE	UART1_BASE[m
+[32m+[m[32m#define CONFIG_CONSOLE_DEV		"ttymxc0"[m
+[32m+[m[32m#define CONFIG_MMCROOT			"/dev/mmcblk2p2"[m
+[32m+[m[32m#define PHYS_SDRAM_SIZE		(1u * 1024 * 1024 * 1024)[m
+[32m+[m
+[32m+[m[32m#define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */[m
+[32m+[m
+[32m+[m[32m#define VIDEO_ARGS        "${video_args}"[m
+[32m+[m[32m#define VIDEO_ARGS_SCRIPT "run video_args_script; "[m
+[32m+[m
+[32m+[m[32m#include "mx6openrex_common.h"[m
+[32m+[m
+[32m+[m[32m#define CONFIG_SYS_FSL_USDHC_NUM	3[m
+[32m+[m[32m#if defined(CONFIG_ENV_IS_IN_MMC)[m
+[32m+[m[32m#define CONFIG_SYS_MMC_ENV_DEV		1	/* SDHC3 */[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#define CONFIG_CMD_PCI[m
+[32m+[m[32m#ifdef CONFIG_CMD_PCI[m
+[32m+[m[32m#define CONFIG_PCI[m
+[32m+[m[32m#define CONFIG_PCI_PNP[m
+[32m+[m[32m#define CONFIG_PCI_SCAN_SHOW[m
+[32m+[m[32m#define CONFIG_PCIE_IMX[m
+[32m+[m[32m#define CONFIG_PCIE_IMX_PERST_GPIO	IMX_GPIO_NR(7, 12)[m
+[32m+[m[32m#define CONFIG_PCIE_IMX_POWER_GPIO	IMX_GPIO_NR(3, 19)[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m/* I2C Configs */[m
+[32m+[m[32m#define CONFIG_CMD_I2C[m
+[32m+[m[32m#define CONFIG_SYS_I2C[m
+[32m+[m[32m#define CONFIG_SYS_I2C_MXC[m
+[32m+[m[32m#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */[m
+[32m+[m[32m#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */[m
+[32m+[m[32m#define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */[m
+[32m+[m[32m#define CONFIG_SYS_I2C_SPEED		  100000[m
+[32m+[m
+[32m+[m[32m/* PMIC */[m
+[32m+[m[32m#define CONFIG_POWER[m
+[32m+[m[32m#define CONFIG_POWER_I2C[m
+[32m+[m[32m#define CONFIG_POWER_PFUZE100[m
+[32m+[m[32m#define CONFIG_POWER_PFUZE100_I2C_ADDR	0x08[m
+[32m+[m
+[32m+[m[32m/* USB Configs */[m
+[32m+[m[32m#define CONFIG_CMD_USB[m
+[32m+[m[32m#ifdef CONFIG_CMD_USB[m
+[32m+[m[32m#define CONFIG_USB_EHCI[m
+[32m+[m[32m#define CONFIG_USB_EHCI_MX6[m
+[32m+[m[32m#define CONFIG_USB_STORAGE[m
+[32m+[m[32m#define CONFIG_EHCI_HCD_INIT_AFTER_RESET[m
+[32m+[m[32m#define CONFIG_USB_HOST_ETHER[m
+[32m+[m[32m#define CONFIG_USB_ETHER_ASIX[m
+[32m+[m[32m#define CONFIG_MXC_USB_PORTSC		(PORT_PTS_UTMI | PORT_PTS_PTW)[m
+[32m+[m[32m#define CONFIG_MXC_USB_FLAGS		0[m
+[32m+[m[32m#define CONFIG_USB_MAX_CONTROLLER_COUNT	1 /* Enabled USB controller number */[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#endif                         /* __MX6QSABRESD_CONFIG_H */[m
+[1mdiff --git a/include/configs/mx6openrex_common.h b/include/configs/mx6openrex_common.h[m
+[1mnew file mode 100644[m
+[1mindex 0000000..4b92574[m
+[1m--- /dev/null[m
+[1m+++ b/include/configs/mx6openrex_common.h[m
+[36m@@ -0,0 +1,284 @@[m
+[32m+[m[32m/*[m
+[32m+[m[32m * Copyright (C) 2012 Freescale Semiconductor, Inc.[m
+[32m+[m[32m *[m
+[32m+[m[32m * Configuration settings for the Freescale i.MX6Q SabreSD board.[m
+[32m+[m[32m *[m
+[32m+[m[32m * SPDX-License-Identifier:	GPL-2.0+[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32m#ifndef __MX6QSABRE_COMMON_CONFIG_H[m
+[32m+[m[32m#define __MX6QSABRE_COMMON_CONFIG_H[m
+[32m+[m
+[32m+[m[32m#include "mx6_common.h"[m
+[32m+[m
+[32m+[m[32m#define CONFIG_IMX_THERMAL[m
+[32m+[m
+[32m+[m[32m/* Size of malloc() pool */[m
+[32m+[m[32m#define CONFIG_SYS_MALLOC_LEN		(10 * SZ_1M)[m
+[32m+[m
+[32m+[m[32m#define CONFIG_BOARD_EARLY_INIT_F[m
+[32m+[m[32m#define CONFIG_BOARD_LATE_INIT[m
+[32m+[m
+[32m+[m[32m#define CONFIG_MXC_UART[m
+[32m+[m
+[32m+[m[32m/* MMC Configs */[m
+[32m+[m[32m#define CONFIG_SYS_FSL_ESDHC_ADDR      0[m
+[32m+[m
+[32m+[m[32m#define CONFIG_CMD_PING[m
+[32m+[m[32m#define CONFIG_CMD_DHCP[m
+[32m+[m[32m#define CONFIG_CMD_MII[m
+[32m+[m[32m#define CONFIG_FEC_MXC[m
+[32m+[m[32m#define CONFIG_MII[m
+[32m+[m[32m#define IMX_FEC_BASE			ENET_BASE_ADDR[m
+[32m+[m[32m#define CONFIG_FEC_XCV_TYPE		RGMII[m
+[32m+[m[32m#define CONFIG_ETHPRIME			"FEC"[m
+[32m+[m[32m#define CONFIG_FEC_MXC_PHYADDR		1[m
+[32m+[m
+[32m+[m[32m#define CONFIG_PHYLIB[m
+[32m+[m[32m#define CONFIG_PHY_ATHEROS[m
+[32m+[m
+[32m+[m[32m#define CONFIG_CMD_SF[m
+[32m+[m[32m#ifdef CONFIG_CMD_SF[m
+[32m+[m[32m#define CONFIG_SPI_FLASH_STMICRO[m
+[32m+[m[32m#define CONFIG_MXC_SPI[m
+[32m+[m[32m#define CONFIG_SF_DEFAULT_BUS		0[m
+[32m+[m[32m#define CONFIG_SF_DEFAULT_CS		0[m
+[32m+[m[32m#define CONFIG_SF_DEFAULT_SPEED		20000000[m
+[32m+[m[32m#define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m/* Command definition */[m
+[32m+[m[32m#define CONFIG_CMD_BMODE[m
+[32m+[m
+[32m+[m[32m#ifdef CONFIG_SUPPORT_EMMC_BOOT[m
+[32m+[m[32m#define EMMC_ENV \[m
+[32m+[m	[32m"emmcdev=2\0" \[m
+[32m+[m	[32m"update_emmc_firmware=" \[m
+[32m+[m		[32m"if test ${ip_dyn} = yes; then " \[m
+[32m+[m			[32m"setenv get_cmd dhcp; " \[m
+[32m+[m		[32m"else " \[m
+[32m+[m			[32m"setenv get_cmd tftp; " \[m
+[32m+[m		[32m"fi; " \[m
+[32m+[m		[32m"if ${get_cmd} ${update_sd_firmware_filename}; then " \[m
+[32m+[m			[32m"if mmc dev ${emmcdev} 1; then "	\[m
+[32m+[m				[32m"setexpr fw_sz ${filesize} / 0x200; " \[m
+[32m+[m				[32m"setexpr fw_sz ${fw_sz} + 1; "	\[m
+[32m+[m				[32m"mmc write ${loadaddr} 0x2 ${fw_sz}; " \[m
+[32m+[m			[32m"fi; "	\[m
+[32m+[m		[32m"fi\0"[m
+[32m+[m[32m#else[m
+[32m+[m[32m#define EMMC_ENV ""[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG[m
+[32m+[m
+[32m+[m[32m#ifndef VIDEO_ARGS[m
+[32m+[m[32m#define VIDEO_ARGS ""[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#ifndef VIDEO_ARGS_SCRIPT[m
+[32m+[m[32m#define VIDEO_ARGS_SCRIPT ""[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#define CONFIG_EXTRA_ENV_SETTINGS \[m
+[32m+[m	[32m"script=boot.scr\0" \[m
+[32m+[m	[32m"image=zImage\0" \[m
+[32m+[m	[32m"fdt_file=undefined\0" \[m
+[32m+[m	[32m"fdt_addr=0x18000000\0" \[m
+[32m+[m	[32m"boot_fdt=try\0" \[m
+[32m+[m	[32m"ip_dyn=yes\0" \[m
+[32m+[m	[32m"console=" CONFIG_CONSOLE_DEV "\0" \[m
+[32m+[m	[32m"dfuspi=dfu 0 sf 0:0:10000000:0\0" \[m
+[32m+[m	[32m"dfu_alt_info_spl=spl raw 0x400\0" \[m
+[32m+[m	[32m"dfu_alt_info_img=u-boot raw 0x10000\0" \[m
+[32m+[m	[32m"dfu_alt_info=spl raw 0x400\0" \[m
+[32m+[m	[32m"fdt_high=0xffffffff\0"	  \[m
+[32m+[m	[32m"initrd_high=0xffffffff\0" \[m
+[32m+[m	[32m"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \[m
+[32m+[m	[32m"mmcpart=1\0" \[m
+[32m+[m	[32m"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \[m
+[32m+[m	[32m"update_sd_firmware=" \[m
+[32m+[m		[32m"if test ${ip_dyn} = yes; then " \[m
+[32m+[m			[32m"setenv get_cmd dhcp; " \[m
+[32m+[m		[32m"else " \[m
+[32m+[m			[32m"setenv get_cmd tftp; " \[m
+[32m+[m		[32m"fi; " \[m
+[32m+[m		[32m"if mmc dev ${mmcdev}; then "	\[m
+[32m+[m			[32m"if ${get_cmd} ${update_sd_firmware_filename}; then " \[m
+[32m+[m				[32m"setexpr fw_sz ${filesize} / 0x200; " \[m
+[32m+[m				[32m"setexpr fw_sz ${fw_sz} + 1; "	\[m
+[32m+[m				[32m"mmc write ${loadaddr} 0x2 ${fw_sz}; " \[m
+[32m+[m			[32m"fi; "	\[m
+[32m+[m		[32m"fi\0" \[m
+[32m+[m	[32mEMMC_ENV	  \[m
+[32m+[m	[32m"video_args_hdmi=setenv video_args $video_args " \[m
+[32m+[m		[32m"video=mxcfb${fb}:dev=hdmi,1280x720M@60,if=RGB24\0" \[m
+[32m+[m	[32m"video_args_lvds=setenv video_args $video_args " \[m
+[32m+[m		[32m"video=mxcfb${fb}:dev=ldb,LDB-XGA,if=RGB666\0" \[m
+[32m+[m	[32m"video_args_lcd=setenv video_args $video_args " \[m
+[32m+[m		[32m"video=mxcfb${fb}:dev=lcd,CLAA-WVGA,if=RGB666\0" \[m
+[32m+[m	[32m"fb=0\0" \[m
+[32m+[m	[32m"video_interfaces=hdmi lvds lcd\0" \[m
+[32m+[m	[32m"video_args_script=" \[m
+[32m+[m		[32m"for v in ${video_interfaces}; do " \[m
+[32m+[m			[32m"run video_args_${v}; " \[m
+[32m+[m			[32m"setexpr fb $fb + 1; " \[m
+[32m+[m		[32m"done\0" \[m
+[32m+[m	[32m"mmcargs=setenv bootargs console=${console},${baudrate} " \[m
+[32m+[m		[32m"root=${mmcroot} " \[m
+[32m+[m		[32mVIDEO_ARGS "\0" \[m
+[32m+[m	[32m"loadbootscript=" \[m
+[32m+[m		[32m"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \[m
+[32m+[m	[32m"bootscript=echo Running bootscript from mmc ...; " \[m
+[32m+[m		[32m"source\0" \[m
+[32m+[m	[32m"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \[m
+[32m+[m	[32m"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \[m
+[32m+[m	[32m"mmcboot=echo Booting from mmc ...; " \[m
+[32m+[m		[32mVIDEO_ARGS_SCRIPT \[m
+[32m+[m		[32m"run mmcargs; " \[m
+[32m+[m		[32m"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \[m
+[32m+[m			[32m"if run loadfdt; then " \[m
+[32m+[m				[32m"bootz ${loadaddr} - ${fdt_addr}; " \[m
+[32m+[m			[32m"else " \[m
+[32m+[m				[32m"if test ${boot_fdt} = try; then " \[m
+[32m+[m					[32m"bootz; " \[m
+[32m+[m				[32m"else " \[m
+[32m+[m					[32m"echo WARN: Cannot load the DT; " \[m
+[32m+[m				[32m"fi; " \[m
+[32m+[m			[32m"fi; " \[m
+[32m+[m		[32m"else " \[m
+[32m+[m			[32m"bootz; " \[m
+[32m+[m		[32m"fi;\0" \[m
+[32m+[m	[32m"netargs=setenv bootargs console=${console},${baudrate} " \[m
+[32m+[m		[32m"root=/dev/nfs " \[m
+[32m+[m		[32m"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \[m
+[32m+[m	[32m"netboot=echo Booting from net ...; " \[m
+[32m+[m		[32m"run netargs; " \[m
+[32m+[m		[32m"if test ${ip_dyn} = yes; then " \[m
+[32m+[m			[32m"setenv get_cmd dhcp; " \[m
+[32m+[m		[32m"else " \[m
+[32m+[m			[32m"setenv get_cmd tftp; " \[m
+[32m+[m		[32m"fi; " \[m
+[32m+[m		[32m"${get_cmd} ${image}; " \[m
+[32m+[m		[32m"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \[m
+[32m+[m			[32m"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \[m
+[32m+[m				[32m"bootz ${loadaddr} - ${fdt_addr}; " \[m
+[32m+[m			[32m"else " \[m
+[32m+[m				[32m"if test ${boot_fdt} = try; then " \[m
+[32m+[m					[32m"bootz; " \[m
+[32m+[m				[32m"else " \[m
+[32m+[m					[32m"echo WARN: Cannot load the DT; " \[m
+[32m+[m				[32m"fi; " \[m
+[32m+[m			[32m"fi; " \[m
+[32m+[m		[32m"else " \[m
+[32m+[m			[32m"bootz; " \[m
+[32m+[m		[32m"fi;\0" \[m
+[32m+[m		[32m"findfdt="\[m
+[32m+[m			[32m"if test $fdt_file = undefined; then " \[m
+[32m+[m				[32m"if test $board_name = SABREAUTO && test $board_rev = MX6QP; then " \[m
+[32m+[m					[32m"setenv fdt_file imx6qp-sabreauto.dtb; fi; " \[m
+[32m+[m				[32m"if test $board_name = SABREAUTO && test $board_rev = MX6Q; then " \[m
+[32m+[m					[32m"setenv fdt_file imx6q-sabreauto.dtb; fi; " \[m
+[32m+[m				[32m"if test $board_name = SABREAUTO && test $board_rev = MX6DL; then " \[m
+[32m+[m					[32m"setenv fdt_file imx6dl-sabreauto.dtb; fi; " \[m
+[32m+[m				[32m"if test $board_name = SABRESD && test $board_rev = MX6QP; then " \[m
+[32m+[m					[32m"setenv fdt_file imx6qp-sabresd.dtb; fi; " \[m
+[32m+[m				[32m"if test $board_name = SABRESD && test $board_rev = MX6Q; then " \[m
+[32m+[m					[32m"setenv fdt_file imx6q-sabresd-ldo.dtb; fi; " \[m
+[32m+[m				[32m"if test $board_name = SABRESD && test $board_rev = MX6DL; then " \[m
+[32m+[m					[32m"setenv fdt_file imx6dl-sabresd-ldo.dtb; fi; " \[m
+[32m+[m				[32m"if test $fdt_file = undefined; then " \[m
+[32m+[m					[32m"echo WARNING: Could not determine dtb to use; fi; " \[m
+[32m+[m			[32m"fi;\0" \[m
+[32m+[m
+[32m+[m
+[32m+[m[32m#define CONFIG_BOOTCOMMAND \[m
+[32m+[m	[32m"run findfdt;" \[m
+[32m+[m	[32m"mmc dev ${mmcdev};" \[m
+[32m+[m	[32m"if mmc rescan; then " \[m
+[32m+[m		[32m"if run loadbootscript; then " \[m
+[32m+[m		[32m"run bootscript; " \[m
+[32m+[m		[32m"else " \[m
+[32m+[m			[32m"if run loadimage; then " \[m
+[32m+[m				[32m"run mmcboot; " \[m
+[32m+[m			[32m"else run netboot; " \[m
+[32m+[m			[32m"fi; " \[m
+[32m+[m		[32m"fi; " \[m
+[32m+[m	[32m"else run netboot; fi"[m
+[32m+[m
+[32m+[m[32m#define CONFIG_ARP_TIMEOUT     200UL[m
+[32m+[m
+[32m+[m[32m#define CONFIG_SYS_MEMTEST_START       0x10000000[m
+[32m+[m[32m#define CONFIG_SYS_MEMTEST_END         0x10010000[m
+[32m+[m[32m#define CONFIG_SYS_MEMTEST_SCRATCH     0x10800000[m
+[32m+[m
+[32m+[m[32m#define CONFIG_STACKSIZE               (128 * 1024)[m
+[32m+[m
+[32m+[m[32m/* Physical Memory Map */[m
+[32m+[m[32m#define CONFIG_NR_DRAM_BANKS           1[m
+[32m+[m[32m#define PHYS_SDRAM                     MMDC0_ARB_BASE_ADDR[m
+[32m+[m
+[32m+[m[32m#define CONFIG_SYS_SDRAM_BASE          PHYS_SDRAM[m
+[32m+[m[32m#define CONFIG_SYS_INIT_RAM_ADDR       IRAM_BASE_ADDR[m
+[32m+[m[32m#define CONFIG_SYS_INIT_RAM_SIZE       IRAM_SIZE[m
+[32m+[m
+[32m+[m[32m#define CONFIG_SYS_INIT_SP_OFFSET \[m
+[32m+[m	[32m(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)[m
+[32m+[m[32m#define CONFIG_SYS_INIT_SP_ADDR \[m
+[32m+[m	[32m(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)[m
+[32m+[m
+[32m+[m[32m/* Environment organization */[m
+[32m+[m[32m#define CONFIG_ENV_SIZE			(8 * 1024)[m
+[32m+[m
+[32m+[m[32m#define CONFIG_ENV_IS_IN_MMC[m
+[32m+[m
+[32m+[m[32m#if defined(CONFIG_ENV_IS_IN_MMC)[m
+[32m+[m[32m#define CONFIG_ENV_OFFSET		(8 * 64 * 1024)[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m/* Framebuffer */[m
+[32m+[m[32m#define CONFIG_VIDEO[m
+[32m+[m[32m#define CONFIG_VIDEO_IPUV3[m
+[32m+[m[32m#define CONFIG_CFB_CONSOLE[m
+[32m+[m[32m#define CONFIG_VGA_AS_SINGLE_DEVICE[m
+[32m+[m[32m#define CONFIG_SYS_CONSOLE_IS_IN_ENV[m
+[32m+[m[32m#define CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE[m
+[32m+[m[32m#define CONFIG_VIDEO_BMP_RLE8[m
+[32m+[m[32m#define CONFIG_SPLASH_SCREEN[m
+[32m+[m[32m#define CONFIG_SPLASH_SCREEN_ALIGN[m
+[32m+[m[32m#define CONFIG_BMP_16BPP[m
+[32m+[m[32m#define CONFIG_VIDEO_LOGO[m
+[32m+[m[32m#define CONFIG_VIDEO_BMP_LOGO[m
+[32m+[m[32m#define CONFIG_IPUV3_CLK 260000000[m
+[32m+[m[32m#define CONFIG_IMX_HDMI[m
+[32m+[m[32m#define CONFIG_IMX_VIDEO_SKIP[m
+[32m+[m
+[32m+[m[32m#ifndef CONFIG_SPL[m
+[32m+[m[32m#define CONFIG_CI_UDC[m
+[32m+[m[32m#define CONFIG_USBD_HS[m
+[32m+[m[32m#define CONFIG_USB_GADGET_DUALSPEED[m
+[32m+[m
+[32m+[m[32m#define CONFIG_USB_GADGET[m
+[32m+[m[32m#define CONFIG_CMD_USB_MASS_STORAGE[m
+[32m+[m[32m#define CONFIG_USB_FUNCTION_MASS_STORAGE[m
+[32m+[m[32m#define CONFIG_USB_GADGET_DOWNLOAD[m
+[32m+[m[32m#define CONFIG_USB_GADGET_VBUS_DRAW	2[m
+[32m+[m
+[32m+[m[32m#define CONFIG_G_DNL_VENDOR_NUM		0x0525[m
+[32m+[m[32m#define CONFIG_G_DNL_PRODUCT_NUM	0xa4a5[m
+[32m+[m[32m#define CONFIG_G_DNL_MANUFACTURER	"FSL"[m
+[32m+[m
+[32m+[m[32m#define CONFIG_USB_FUNCTION_FASTBOOT[m
+[32m+[m[32m#define CONFIG_CMD_FASTBOOT[m
+[32m+[m[32m#define CONFIG_ANDROID_BOOT_IMAGE[m
+[32m+[m[32m#define CONFIG_FASTBOOT_BUF_ADDR   CONFIG_SYS_LOAD_ADDR[m
+[32m+[m[32m#define CONFIG_FASTBOOT_BUF_SIZE   0x07000000[m
+[32m+[m
+[32m+[m[32m/* USB Device Firmware Update support */[m
+[32m+[m[32m#define CONFIG_CMD_DFU[m
+[32m+[m[32m#define CONFIG_USB_FUNCTION_DFU[m
+[32m+[m[32m#define CONFIG_DFU_MMC[m
+[32m+[m[32m#define CONFIG_DFU_SF[m
+[32m+[m[32m#endif[m
+[32m+[m
+[32m+[m[32m#endif                         /* __MX6QSABRE_COMMON_CONFIG_H */[m
